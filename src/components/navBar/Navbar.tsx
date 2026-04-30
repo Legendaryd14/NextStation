@@ -10,6 +10,8 @@ import {
   MobileNavToggle,
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
+import { ShoppingBasket } from "@gravity-ui/icons";
+import { SearchIcon, SearchXIcon } from "lucide-react";
 import { useState } from "react";
 
 import React from "react";
@@ -31,8 +33,13 @@ export function NavbarComponent() {
           <NavbarLogo />
           <NavItems items={navItems} />
           <div className="flex items-center gap-4">
-            <NavbarButton variant="secondary">Login</NavbarButton>
-            <NavbarButton variant="primary">Book a call</NavbarButton>
+            <NavbarButton variant="primary">Login</NavbarButton>
+            <NavbarButton variant="secondary">
+              <ShoppingBasket className="text-amber-50 text-3xl" />
+            </NavbarButton>
+            <NavbarButton variant="secondary">
+              <SearchIcon className="text-amber-50" />
+            </NavbarButton>
           </div>
         </NavBody>
 

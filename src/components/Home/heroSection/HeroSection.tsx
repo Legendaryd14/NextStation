@@ -7,7 +7,6 @@ import { motion } from "framer-motion"; // optional for animation
 const HeroSection = () => {
   return (
     <section className="relative w-full h-screen overflow-hidden">
-      {/* 1️⃣ Background Image */}
       <Image
         src="/Assets/Group2.png"
         alt="Hero Background"
@@ -18,10 +17,8 @@ const HeroSection = () => {
 
       <div className="absolute inset-0 bg-gradient-to-r from-[#030405]/90 via-[#030405]/70 to-transparent " />
 
-      {/* 3️⃣ Animated Glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_40%,rgba(255,255,255,0.08)_0%,transparent_60%)]" />
 
-      {/* 4️⃣ Text Container */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -50,7 +47,6 @@ const HeroSection = () => {
           Buy the latest games on every platform — faster and easier than ever.
         </p>
 
-        {/* CTA Buttons */}
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 mt-6">
           <a
             href="#products"
@@ -83,7 +79,6 @@ const HeroSection = () => {
           </a>
         </div>
 
-        {/* Info Blocks */}
         <div className="flex flex-wrap gap-12 mt-10">
           {[
             {
