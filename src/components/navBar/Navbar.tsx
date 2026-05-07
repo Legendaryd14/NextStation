@@ -11,7 +11,7 @@ import {
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
 import { ShoppingBasket } from "@gravity-ui/icons";
-import { SearchIcon, SearchXIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { useState } from "react";
 
 import React from "react";
