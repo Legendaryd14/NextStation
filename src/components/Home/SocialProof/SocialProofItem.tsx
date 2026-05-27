@@ -2,14 +2,12 @@
 
 import React from "react";
 import { SocialProofItem } from "@/type/socialproof";
-import { Url } from "next/dist/shared/lib/router/router";
-import Image from "next/image";
 
 const socialProofItem: SocialProofItem[] = [
   {
     id: 1,
     name: "Epic Games",
-    logo: "@svg/Epic_Games_logo.svg",
+    logo: "svg/Epic_Games_logo.svg",
     url: "https://store.epicgames.com/en-US",
     alt: "EpicGames",
     featured: false,
@@ -17,7 +15,7 @@ const socialProofItem: SocialProofItem[] = [
   {
     id: 2,
     name: "Steam",
-    logo: "@svg/steam_icon_logo.svg",
+    logo: "svg/steam_icon_logo.svg",
     url: "https://store.steampowered.com/",
     alt: "STeam",
     featured: false,
@@ -25,7 +23,7 @@ const socialProofItem: SocialProofItem[] = [
   {
     id: 3,
     name: "Ubisoft Connect",
-    logo: "@svg/Ubisoft_Connect_logo.svg",
+    logo: "svg/183407.svg",
     url: "https://www.ubisoft.com/en-gb/ubisoft-connect",
     alt: "UbisoftConnect",
     featured: false,
@@ -33,33 +31,33 @@ const socialProofItem: SocialProofItem[] = [
   {
     id: 4,
     name: "Origins",
-    logo: "",
-    url: "",
-    alt: "",
+    logo: "svg/origin-1-logo-svg-vector.svg",
+    url: "https://www.ea.com/ea-app",
+    alt: "Origins",
     featured: false,
   },
   {
     id: 5,
     name: "BattleNet",
-    logo: "",
-    url: "",
-    alt: "",
+    logo: "svg/battlenet-480.svg",
+    url: "https://us.shop.battle.net/en-gb",
+    alt: "Battle.net",
     featured: false,
   },
   {
     id: 6,
     name: "Xbox",
-    logo: "",
-    url: "",
-    alt: "",
+    logo: "svg/Xbox_one_logo.svg",
+    url: "https://www.xbox.com/ar-SA",
+    alt: "XBOX",
     featured: false,
   },
   {
     id: 7,
     name: "Playstation",
-    logo: "",
-    url: "",
-    alt: "",
+    logo: "svg/PlayStation_logo_colour.svg",
+    url: "https://www.playstation.com/en-us/",
+    alt: "Playstation",
     featured: false,
   },
 ];

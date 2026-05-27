@@ -1,18 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { Footer } from "@/components/footer/Footer";
-import { NavbarComponent } from "@/components/navBar/Navbar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import "@/styles/globals.css";
+import { AuthProvider } from "@/components/auth/context/Authcontext";
+import { ThemeProvider } from "@/components/theme/themeProvider";
 
 export const metadata: Metadata = {
   title: "NextStation",
@@ -25,18 +15,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" suppressHydrationWarning className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <header>
-          <NavbarComponent />
-        </header>
-        {children}
-        <footer>
-          <Footer />
-        </footer>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

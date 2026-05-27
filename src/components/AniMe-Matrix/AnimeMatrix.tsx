@@ -19,7 +19,7 @@ export default function AnimeMatrixInteractive({
     const w = canvas.width;
     const h = canvas.height;
 
-    let imgDataCache = [];
+    const imgDataCache: ImageData[] = [];
 
     // بارگذاری قبلی تصاویر
     images.forEach((src, i) => {

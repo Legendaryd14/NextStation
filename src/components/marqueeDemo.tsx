@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Marquee } from "@/registry/magicui/marquee";
+import { Marquee } from "./ui/marquee";
 
 const reviews = [
   {

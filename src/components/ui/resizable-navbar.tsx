@@ -8,6 +8,7 @@ import {
   useMotionValueEvent,
 } from "motion/react";
 import Image from "next/image";
+import Link from "next/link";
 
 import React, { useRef, useState } from "react";
 
@@ -26,6 +27,14 @@ interface NavItemsProps {
   items: {
     name: string;
     link: string;
+    component?: React.ReactElement;
+    dropdown?: {
+      name: string;
+      link: string;
+      description?: string;
+      icon?: React.ReactNode;
+      accent?: string;
+    }[];
   }[];
   className?: string;
   onItemClick?: () => void;
@@ -116,31 +125,125 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
 
 export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
 
   return (
     <motion.div
-      onMouseLeave={() => setHovered(null)}
+      onMouseLeave={() => {
+        setHovered(null);
+        setDropdownOpen(null);
+      }}
       className={cn(
         "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2",
         className,
       )}
     >
       {items.map((item, idx) => (
-        <a
-          onMouseEnter={() => setHovered(idx)}
-          onClick={onItemClick}
-          className="relative px-4 py-2 text-gray-300 dark:text-neutral-300"
+        <div
           key={`link-${idx}`}
-          href={item.link}
+          className="relative"
+          onMouseEnter={() => {
+            setHovered(idx);
+            if (item.dropdown) setDropdownOpen(idx);
+          }}
+          onMouseLeave={() => {
+            if (item.dropdown) setDropdownOpen(null);
+          }}
         >
-          {hovered === idx && (
-            <motion.div
-              layoutId="hovered"
-              className="absolute inset-0 h-full w-full rounded-full bg-[#544c50] dark:bg-neutral-800"
-            />
-          )}
-          <span className="relative z-20">{item.name}</span>
-        </a>
+          <a
+            onClick={onItemClick}
+            className="relative flex items-center gap-1 px-4 py-2 text-gray-300 dark:text-neutral-300"
+            href={item.link}
+          >
+            {hovered === idx && (
+              <motion.div
+                layoutId="hovered"
+                className="absolute inset-0 h-full w-full rounded-full bg-[#544c50] dark:bg-neutral-800"
+              />
+            )}
+            <span className="relative z-20">{item.name}</span>
+            {item.dropdown && (
+              <motion.svg
+                animate={{ rotate: dropdownOpen === idx ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+                className="relative z-20 h-3 w-3 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </motion.svg>
+            )}
+          </a>
+
+          {/* Dropdown */}
+          <AnimatePresence>
+            {item.dropdown && dropdownOpen === idx && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                style={{
+                  backdropFilter: "blur(28px) saturate(145%)",
+                  WebkitBackdropFilter: "blur(28px) saturate(145%)",
+                }}
+                className="absolute left-1/2 top-full mt-3 w-[36rem] -translate-x-1/2 rounded-lg border border-white/15 bg-black/35 p-2 shadow-2xl shadow-black/35 backdrop-blur-2xl backdrop-saturate-150"
+              >
+                <div
+                  style={{
+                    backdropFilter: "blur(28px) saturate(145%)",
+                    WebkitBackdropFilter: "blur(28px) saturate(145%)",
+                  }}
+                  className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 rounded-sm border-l border-t border-white/15 bg-black/35 backdrop-blur-2xl backdrop-saturate-150"
+                />
+
+                <div className="border-b border-white/10 px-3 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35">
+                    Browse by genre
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1 pt-2">
+                  {item.dropdown.map((dropItem, dropIdx) => (
+                    <motion.a
+                      key={dropIdx}
+                      href={dropItem.link}
+                      whileHover={{ y: -2 }}
+                      transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                      className="group relative flex items-start gap-3 overflow-hidden rounded-lg px-3 py-3 text-sm text-gray-300 transition-colors hover:bg-white/[0.12] hover:shadow-lg hover:shadow-black/20"
+                    >
+                      <span className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 skew-x-[-18deg] bg-white/10 opacity-0 blur-sm transition-all duration-500 group-hover:left-full group-hover:opacity-100" />
+                      <span
+                        className={cn(
+                          "relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-110",
+                          dropItem.accent ?? "bg-white/10 text-white/70",
+                        )}
+                      >
+                        {dropItem.icon}
+                      </span>
+                      <span className="relative min-w-0">
+                        <span className="block font-medium text-white transition group-hover:text-amber-200">
+                          {dropItem.name}
+                        </span>
+                        {dropItem.description && (
+                          <span className="mt-1 block text-xs leading-5 text-white/45 transition group-hover:text-white/70">
+                            {dropItem.description}
+                          </span>
+                        )}
+                      </span>
+                    </motion.a>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       ))}
     </motion.div>
   );
@@ -205,6 +308,9 @@ export const MobileNavMenu = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) onClose();
+          }}
           className={cn(
             "absolute inset-x-0 top-16 z-50 flex w-full flex-col items-start justify-start gap-4 rounded-lg bg-white px-4 py-8 shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset] dark:bg-neutral-950",
             className,
@@ -233,12 +339,12 @@ export const MobileNavToggle = ({
 
 export const NavbarLogo = () => {
   return (
-    <a
-      href="#"
+    <Link
+      href="/"
       className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal gap-1 text-black"
     >
-      <img
-        src="images/NextStationLogo.png"
+      <Image
+        src="/images/NextStationLogo.png"
         alt="logo"
         width={40}
         height={40}
@@ -247,7 +353,7 @@ export const NavbarLogo = () => {
       <span className="font-bold text-xl text-white dark:text-white">
         NextStation
       </span>
-    </a>
+    </Link>
   );
 };
 

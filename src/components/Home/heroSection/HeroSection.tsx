@@ -2,28 +2,35 @@
 
 import Image from "next/image";
 import React from "react";
-import { motion } from "framer-motion"; // optional for animation
+import { motion } from "framer-motion";
+import { TextHoverEffect } from "@/components/ui/text-hover-effect";
 
 const HeroSection = () => {
   return (
     <section className="relative w-full h-screen overflow-hidden">
-      <Image
-        src="/Assets/Group2.png"
-        alt="Hero Background"
-        fill
-        priority
-        className="object-cover object-center scale-110 animate-[zoomIn_12s_ease-in-out_infinite_alternate]"
-      />
+      {/* تصویر پس‌زمینه - سمت راست */}
+      <div className="absolute right-0 top-0 h-full w-1/2 flex items-start justify-end">
+        <Image
+          src="/images/HeroImg.png"
+          alt="Hero Background"
+          height={800}
+          width={800}
+          priority
+          className="object-contain w-full h-auto animate-[zoomIn_12s_ease-in-out_infinite_alternate]"
+        />
+      </div>
 
-      <div className="absolute inset-0 bg-gradient-to-r from-[#030405]/90 via-[#030405]/70 to-transparent " />
-
+      <div className="absolute inset-0 bg-gradient-to-r from-[#030405]/90 via-[#030405]/70 to-transparent" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_40%,rgba(255,255,255,0.08)_0%,transparent_60%)]" />
 
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 1 }}
-        className="absolute inset-0 flex flex-col justify-center items-start px-8 md:px-16 lg:px-24 space-y-5"
+        className="absolute inset-0 flex flex-col justify-center items-start
+             px-6 sm:px-12 md:px-16 lg:px-24
+             pt-20 md:pt-0
+             gap-4 md:gap-5"
       >
         <motion.h1
           initial={{ opacity: 0, x: -30 }}
@@ -34,14 +41,14 @@ const HeroSection = () => {
           Welcome to
         </motion.h1>
 
-        <motion.h2
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.8 }}
-          className="text-7xl md:text-9xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+          className="bg-clip-text w-fit h-50"
         >
-          NextStation
-        </motion.h2>
+          <TextHoverEffect text="NextStation" />
+        </motion.div>
 
         <p className="text-lg md:text-xl text-white/80 max-w-xl">
           Buy the latest games on every platform — faster and easier than ever.
@@ -72,7 +79,7 @@ const HeroSection = () => {
 
           <a
             href="#explore"
-            className="inline-flex items-center px-7 py-3 rounded-xl border border-white/30 hover:bg-white/10 
+            className="inline-flex items-center px-7 py-3 rounded-xl border border-white/30 hover:bg-white/10
               transition-all duration-300 text-white/90 font-semibold backdrop-blur-sm"
           >
             Explore More
