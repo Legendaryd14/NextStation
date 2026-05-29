@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import Image from "next/image";
-import { ProductType } from "@/type/productRes";
+import { ProductType, ProductsResponse, getTotalPages } from "@/type/productRes";
 import { BASE_URL } from "@/app/base";
+import { productsApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   dashboardButtonClass,
@@ -19,29 +19,47 @@ export default function StocksComponent() {
   const [products, setProducts] = useState<ProductType[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [error, setError] = useState("");
 
   const limit = 10;
 
-  const fetchProducts = async (pageNumber: number) => {
-    try {
-      const res = await axios.get(
-        `${BASE_URL}/api/products?page=${pageNumber}&limit=${limit}`,
-      );
-
-      setProducts(res.data.data);
-      setTotalPages(res.data.totalPages);
-    } catch (err) {
-      console.error("Fetch products error", err);
-    }
-  };
-
   useEffect(() => {
-    fetchProducts(page);
+    let ignore = false;
+
+    async function fetchProducts() {
+      try {
+        const res = await productsApi.list({ page, limit }) as ProductsResponse & {
+          data: ProductType[];
+        };
+
+        if (ignore) return;
+
+        setError("");
+        setProducts(res.data ?? []);
+        setTotalPages(getTotalPages(res));
+      } catch (err) {
+        console.error("Fetch products error", err);
+        if (ignore) return;
+        setError("Unable to load stock data.");
+      }
+    }
+
+    void fetchProducts();
+
+    return () => {
+      ignore = true;
+    };
   }, [page]);
 
   return (
     <div className={dashboardPageClass()}>
       <h2 className={dashboardTitleClass("mb-6")}>Product Stock & Prices</h2>
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">
+          {error}
+        </div>
+      )}
 
       <div className={dashboardPanelClass()}>
         <table className="w-full">
@@ -62,7 +80,6 @@ export default function StocksComponent() {
 
               return (
                 <tr key={product._id} className={dashboardTableRowClass()}>
-                  {/* IMAGE */}
                   <td className="px-6 py-4">
                     <Image
                       src={imageUrl}
@@ -73,14 +90,8 @@ export default function StocksComponent() {
                       unoptimized
                     />
                   </td>
-
-                  {/* NAME */}
                   <td className="px-6 py-4">{product.name}</td>
-
-                  {/* PRICE */}
                   <td className="px-6 py-4 font-medium">${product.price}</td>
-
-                  {/* STOCK */}
                   <td className="px-6 py-4">
                     <span
                       className={cn(
@@ -102,24 +113,21 @@ export default function StocksComponent() {
         </table>
       </div>
 
-      {/* PAGINATION */}
       <div className="flex justify-center gap-4 mt-6">
         <button
-        disabled={page === 1}
-        onClick={() => setPage((p) => p - 1)}
-        className={dashboardButtonClass()}
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+          className={dashboardButtonClass()}
         >
           Prev
         </button>
-
         <span>
           Page {page} / {totalPages}
         </span>
-
         <button
-        disabled={page === totalPages}
-        onClick={() => setPage((p) => p + 1)}
-        className={dashboardButtonClass()}
+          disabled={page === totalPages}
+          onClick={() => setPage((p) => p + 1)}
+          className={dashboardButtonClass()}
         >
           Next
         </button>

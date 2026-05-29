@@ -20,9 +20,11 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
 
   const router = useRouter();
   const pathname = usePathname();
-  const authPath = pathname === "/Login" ? "/Login" : "/auth";
+  const authPath = pathname === "/login" ? "/login" : "/auth";
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
+  const [signupError, setSignupError] = useState<string | null>(null);
+  const [isSubmittingSignup, setIsSubmittingSignup] = useState(false);
 
   const handleLoginSubmit = async (data: LoginFormData) => {
     setLoginError(null);
@@ -60,9 +62,37 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
     }
   };
 
-  const handleSignupSubmit = (data: SignupFormData) => {
-    console.log("Signup submitted:", data);
-    // call API /signup ...
+  const handleSignupSubmit = async (data: SignupFormData) => {
+    setSignupError(null);
+    setIsSubmittingSignup(true);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          ...(data.phone ? { phone: data.phone } : {}),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message ?? "Registration failed");
+      }
+
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      setSignupError(
+        error instanceof Error ? error.message : "Something went wrong",
+      );
+    } finally {
+      setIsSubmittingSignup(false);
+    }
   };
 
   return (
@@ -126,7 +156,11 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
               submitError={loginError}
             />
           ) : (
-            <SignupForm onSubmit={handleSignupSubmit} />
+            <SignupForm
+              onSubmit={handleSignupSubmit}
+              isSubmitting={isSubmittingSignup}
+              submitError={signupError}
+            />
           )}
 
           {!isAdminLogin ? (

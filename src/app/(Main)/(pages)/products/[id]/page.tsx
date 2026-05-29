@@ -1,4 +1,5 @@
 import { BASE_URL } from "@/app/base";
+import { ProductCartActions } from "@/components/cart/ProductCartActions";
 import { Product } from "@/type/productRes";
 import { PackageCheck, ShieldCheck, Star, Truck } from "lucide-react";
 import Image from "next/image";
@@ -130,14 +131,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              disabled={product.stock <= 0}
-              className="h-11 rounded-lg bg-amber-300 px-6 text-sm font-semibold text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/35"
-            >
-              Add to cart
-            </button>
+          <div className="mt-8 space-y-3">
+            <ProductCartActions
+              product={{
+                productId: product._id,
+                name: product.name,
+                price: product.price,
+                image: product.images?.[0] ?? "",
+                stock: product.stock,
+                brand: product.brand,
+                category: product.category,
+              }}
+            />
             <Link
               href="/products"
               className="inline-flex h-11 items-center justify-center rounded-lg border border-white/15 px-6 text-sm font-semibold text-white transition hover:bg-white/10"

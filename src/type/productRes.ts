@@ -37,5 +37,13 @@ export interface ProductsResponse {
   total: number;
   page: number;
   pages: number;
+  totalPages?: number;
   data: Product[];
+}
+
+export function getTotalPages(response: {
+  pages?: number;
+  totalPages?: number;
+}): number {
+  return response.pages ?? response.totalPages ?? 1;
 }

@@ -1,27 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { ProductType } from "@/type/productRes";
-import { BASE_URL } from "@/app/base";
+import { ProductType, ProductsResponse, getTotalPages } from "@/type/productRes";
+import { productsApi } from "@/lib/api";
 import { ProductCard } from "./productCard";
 
 type ProductsGridProps = {
   category?: string;
   title?: string;
   description?: string;
-};
-
-type ProductsResponse = {
-  data: ProductType[];
-  totalPages?: number;
-  pages?: number;
-};
-
-type ProductsQuery = {
-  page: number;
-  limit: number;
-  category?: string;
 };
 
 const limit = 9;
@@ -54,23 +41,19 @@ export default function ProductsGrid({
     let ignore = false;
 
     async function fetchProducts() {
-      const params: ProductsQuery = {
-        page,
-        limit,
-      };
-
+      const params: Record<string, string | number> = { page, limit };
       if (category) params.category = category;
 
       try {
-        const res = await axios.get<ProductsResponse>(`${BASE_URL}/api/products`, {
-          params,
-        });
+        const res = (await productsApi.list(params)) as ProductsResponse & {
+          data: ProductType[];
+        };
 
         if (ignore) return;
 
         setError("");
-        setProducts(res.data.data ?? []);
-        setTotalPages(res.data.totalPages ?? res.data.pages ?? 1);
+        setProducts(res.data ?? []);
+        setTotalPages(getTotalPages(res));
       } catch (err) {
         console.error("Fetch products error", err);
 

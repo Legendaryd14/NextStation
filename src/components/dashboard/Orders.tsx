@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Trash2, Package, Clock, CheckCircle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ordersApi } from "@/lib/api";
+import { useIsAdmin } from "@/lib/admin";
+import {
+  DashboardOrder,
+  OrdersResponse,
+  OrderStatus,
+  mapBackendOrder,
+} from "@/type/order";
 import {
   dashboardMutedTextClass,
   dashboardPageClass,
@@ -12,88 +20,53 @@ import {
   dashboardTitleClass,
 } from "./dashboardStyles";
 
-interface Order {
-  id: number;
-  orderNumber: string;
-  customer: string;
-  product: string;
-  quantity: number;
-  total: number;
-  status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
-  date: string;
-}
-
-const initialOrders: Order[] = [
-  {
-    id: 1,
-    orderNumber: "ORD-2024-001",
-    customer: "John Davis",
-    product: "",
-    quantity: 2,
-    total: 159.98,
-    status: "Delivered",
-    date: "2024-05-01",
-  },
-  {
-    id: 2,
-    orderNumber: "ORD-2024-002",
-    customer: "Emily Wilson",
-    product: "",
-    quantity: 1,
-    total: 149.99,
-    status: "Shipped",
-    date: "2024-05-03",
-  },
-  {
-    id: 3,
-    orderNumber: "ORD-2024-003",
-    customer: "Michael Brown",
-    product: "",
-    quantity: 3,
-    total: 299.97,
-    status: "Processing",
-    date: "2024-05-04",
-  },
-  {
-    id: 4,
-    orderNumber: "ORD-2024-004",
-    customer: "Jessica Taylor",
-    product: "",
-    quantity: 1,
-    total: 399.99,
-    status: "Pending",
-    date: "2024-05-05",
-  },
-  {
-    id: 5,
-    orderNumber: "ORD-2024-005",
-    customer: "David Martinez",
-    product: "",
-    quantity: 5,
-    total: 149.95,
-    status: "Delivered",
-    date: "2024-05-06",
-  },
-  {
-    id: 6,
-    orderNumber: "ORD-2024-006",
-    customer: "Sarah Johnson",
-    product: "",
-    quantity: 1,
-    total: 79.99,
-    status: "Cancelled",
-    date: "2024-05-07",
-  },
-];
-
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const isAdmin = useIsAdmin();
+  const [orders, setOrders] = useState<DashboardOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const deleteOrder = (orderId: number) => {
-    setOrders(orders.filter((order) => order.id !== orderId));
+  useEffect(() => {
+    let ignore = false;
+
+    async function fetchOrders() {
+      try {
+        const res = (await ordersApi.list()) as OrdersResponse;
+
+        if (ignore) return;
+
+        setError("");
+        setOrders((res.data ?? []).map(mapBackendOrder));
+      } catch (err) {
+        console.error("Fetch orders error", err);
+        if (ignore) return;
+        setError("Unable to load orders. Admin access required.");
+        setOrders([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+
+    void fetchOrders();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const deleteOrder = async (orderId: string) => {
+    if (!isAdmin) return;
+
+    try {
+      await ordersApi.delete(orderId);
+      setOrders((current) => current.filter((order) => order.id !== orderId));
+    } catch (err) {
+      console.error("Delete order error", err);
+      setError("Failed to delete order.");
+    }
   };
 
-  const getStatusIcon = (status: Order["status"]) => {
+  const getStatusIcon = (status: OrderStatus) => {
     switch (status) {
       case "Pending":
         return <Clock className="w-4 h-4" />;
@@ -107,7 +80,7 @@ export default function OrdersPage() {
     }
   };
 
-  const getStatusColor = (status: Order["status"]) => {
+  const getStatusColor = (status: OrderStatus) => {
     switch (status) {
       case "Pending":
         return "bg-[#ff6600]/10 text-[#ff6600]";
@@ -133,6 +106,12 @@ export default function OrdersPage() {
         </p>
         <div className="mt-2 h-0.5 w-24 bg-primary"></div>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">
+          {error}
+        </div>
+      )}
 
       <div className={dashboardPanelClass()}>
         <div className="overflow-x-auto">
@@ -160,68 +139,80 @@ export default function OrdersPage() {
                 <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
-                  Actions
-                </th>
+                {isAdmin && (
+                  <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
-                <tr
-                  key={order.id}
-                  className={dashboardTableRowClass()}
-                >
-                  <td className="px-6 py-4">
-                    <span className="text-accent font-mono text-sm">
-                      {order.orderNumber}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-foreground">{order.customer}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-muted-foreground">
-                      {order.product}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-foreground">{order.quantity}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-foreground">
-                      ${order.total.toFixed(2)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded px-3 py-1 text-sm",
-                        getStatusColor(order.status),
-                      )}
-                    >
-                      {getStatusIcon(order.status)}
-                      <span>{order.status}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-muted-foreground">{order.date}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => deleteOrder(order.id)}
-                      className="p-2 rounded bg-destructive hover:bg-destructive/80 text-destructive-foreground transition-colors group"
-                      title="Delete order"
-                    >
-                      <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    </button>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={isAdmin ? 8 : 7}
+                    className="px-6 py-10 text-center text-muted-foreground"
+                  >
+                    Loading orders...
                   </td>
                 </tr>
-              ))}
+              ) : (
+                orders.map((order) => (
+                  <tr key={order.id} className={dashboardTableRowClass()}>
+                    <td className="px-6 py-4">
+                      <span className="text-accent font-mono text-sm">
+                        {order.orderNumber}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-foreground">{order.customer}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-muted-foreground">
+                        {order.product}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-foreground">{order.quantity}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-foreground">
+                        ${order.total.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded px-3 py-1 text-sm",
+                          getStatusColor(order.status),
+                        )}
+                      >
+                        {getStatusIcon(order.status)}
+                        <span>{order.status}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-muted-foreground">{order.date}</span>
+                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => deleteOrder(order.id)}
+                          className="p-2 rounded bg-destructive hover:bg-destructive/80 text-destructive-foreground transition-colors group"
+                          title="Delete order"
+                        >
+                          <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {orders.length === 0 && (
+        {!loading && orders.length === 0 && (
           <div className="py-12 text-center">
             <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <p className={dashboardMutedTextClass()}>No orders found</p>

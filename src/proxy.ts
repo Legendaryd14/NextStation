@@ -12,11 +12,11 @@ export async function proxy(req: NextRequest) {
   ];
   const UserRoutes = ["/profile", "/cart", "/checkout"];
   const publicRoutes = [
-    "/Login",
-    "/auth",
     "/login",
+    "/auth",
     "/api/auth/refresh-token",
     "/api/auth/login",
+    "/api/auth/register",
   ];
 
   if (publicRoutes.some((route) => path.startsWith(route))) {
@@ -40,7 +40,7 @@ export async function proxy(req: NextRequest) {
       const role = String(payload.role ?? "").toLowerCase();
 
       if (isAdminRoute && role !== "admin") {
-        return NextResponse.redirect(new URL("/Login?status=login", req.url));
+        return NextResponse.redirect(new URL("/login", req.url));
       }
       if (isUserRoute && !["user", "customer"].includes(role)) {
         return NextResponse.redirect(new URL("/auth?status=login", req.url));
@@ -58,7 +58,7 @@ export async function proxy(req: NextRequest) {
 
 function redirectToLogin(isAdminRoute: boolean, currentUrl: string | URL) {
   const response = NextResponse.redirect(
-    new URL(isAdminRoute ? "/Login?status=login" : "/auth?status=login", currentUrl),
+    new URL(isAdminRoute ? "/login" : "/auth?status=login", currentUrl),
   );
   response.cookies.delete("token");
   response.cookies.delete("refreshToken");

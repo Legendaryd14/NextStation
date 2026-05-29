@@ -10,7 +10,6 @@ import {
   MobileNavToggle,
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
-import { ShoppingBasket } from "@gravity-ui/icons";
 import {
   Car,
   Compass,
@@ -23,6 +22,15 @@ import { useState } from "react";
 
 import React from "react";
 import { AnimatedThemeToggler } from "../ui/animated-theme-toggler";
+import { SearchButton } from "./Searchbutton";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalTrigger,
+} from "../ui/animated-modal";
+import { GooeyInput } from "../ui/gooey-input";
+import { CartTrigger } from "../cart/CartTrigger";
 
 const categories = [
   {
@@ -79,25 +87,38 @@ export function NavbarComponent() {
   return (
     <div className="relative w-full">
       <Navbar>
-        {/* Desktop Navigation */}
-        <NavBody>
-          <NavbarLogo />
-          <NavItems items={navItems} />
-          <div className="flex items-center gap-4">
-            <NavbarButton variant="primary" href="/login">
-              Login
-            </NavbarButton>
-            <NavbarButton variant="secondary">
-              <ShoppingBasket className="text-amber-50 text-3xl" />
-            </NavbarButton>
-            <NavbarButton variant="secondary">
-              <SearchIcon className="text-amber-50" />
-            </NavbarButton>
-            <NavbarButton variant="secondary">
-              <AnimatedThemeToggler className="h-10 w-10" />
-            </NavbarButton>
-          </div>
-        </NavBody>
+        <Modal>
+          {/* Desktop Navigation */}
+          <NavBody>
+            <NavbarLogo />
+            <NavItems items={navItems} />
+            <div className="flex items-center gap-4">
+              <NavbarButton variant="primary" href="/auth?status=login">
+                Login
+              </NavbarButton>
+              <CartTrigger />
+              <NavbarButton variant="secondary">
+                <ModalTrigger>
+                  <SearchIcon />
+                </ModalTrigger>
+                <ModalBody>
+                  <ModalContent className="w-screen h-screen">
+                    <GooeyInput
+                      placeholder="Search..."
+                      collapsedWidth={200}
+                      expandedWidth={300}
+                      gooeyBlur={100}
+                      expandedOffset={100}
+                    />
+                  </ModalContent>
+                </ModalBody>
+              </NavbarButton>
+              <NavbarButton variant="secondary">
+                <AnimatedThemeToggler className="h-10 w-10" />
+              </NavbarButton>
+            </div>
+          </NavBody>
+        </Modal>
 
         {/* Mobile Navigation */}
         <MobileNav>
@@ -153,10 +174,12 @@ export function NavbarComponent() {
               </div>
             ))}
             <div className="flex w-full flex-col gap-4">
+              <CartTrigger className="w-full justify-center border border-white/10 py-3" />
               <NavbarButton
                 onClick={() => setIsMobileMenuOpen(false)}
                 variant="primary"
                 className="w-full"
+                href="/auth?status=login"
               >
                 Login
               </NavbarButton>
@@ -165,7 +188,7 @@ export function NavbarComponent() {
                 variant="primary"
                 className="w-full"
               >
-                Book a call
+                Search
               </NavbarButton>
             </div>
           </MobileNavMenu>

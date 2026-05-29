@@ -8,10 +8,16 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
 interface SignupFormProps {
-  onSubmit: (data: SignupFormData) => void;
+  onSubmit: (data: SignupFormData) => void | Promise<void>;
+  isSubmitting?: boolean;
+  submitError?: string | null;
 }
 
-export default function SignupForm({ onSubmit }: SignupFormProps) {
+export default function SignupForm({
+  onSubmit,
+  isSubmitting = false,
+  submitError,
+}: SignupFormProps) {
   const signupForm = useForm<SignupFormData>({
     defaultValues: {
       name: "",
@@ -106,11 +112,18 @@ export default function SignupForm({ onSubmit }: SignupFormProps) {
         </div>
       </div>
 
+      {submitError ? (
+        <p className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
+          {submitError}
+        </p>
+      ) : null}
+
       <button
         type="submit"
-        className="w-full bg-[#fe1929] hover:bg-[#a91620] text-white py-3 rounded-lg font-medium transition-colors mt-6"
+        disabled={isSubmitting}
+        className="w-full bg-[#fe1929] hover:bg-[#a91620] text-white py-3 rounded-lg font-medium transition-colors mt-6 disabled:opacity-60"
       >
-        Create Account
+        {isSubmitting ? "Creating account..." : "Create Account"}
       </button>
     </form>
   );
