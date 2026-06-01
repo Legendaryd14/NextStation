@@ -71,6 +71,8 @@ export const ordersApi = {
     const query = search.toString();
     return apiClient(`/api/orders${query ? `?${query}` : ""}`);
   },
+  create: (body: unknown) =>
+    apiClient("/api/orders", { method: "POST", body: JSON.stringify(body) }),
   delete: (id: string) =>
     apiClient(`/api/orders/${id}`, { method: "DELETE" }),
   stats: () => apiClient("/api/orders/stats"),

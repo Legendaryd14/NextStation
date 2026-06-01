@@ -38,8 +38,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setItems(readStoredCart());
-    setHydrated(true);
+    queueMicrotask(() => {
+      setItems(readStoredCart());
+      setHydrated(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -104,6 +106,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  const clearCart = useCallback(() => {
+    setItems([]);
+  }, []);
+
   const getItemQuantity = useCallback(
     (productId: string) =>
       items.find((item) => item.productId === productId)?.quantity ?? 0,
@@ -133,6 +139,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeItem,
       incrementItem,
       decrementItem,
+      clearCart,
       getItemQuantity,
     }),
     [
@@ -144,6 +151,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeItem,
       incrementItem,
       decrementItem,
+      clearCart,
       getItemQuantity,
     ],
   );

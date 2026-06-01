@@ -35,7 +35,9 @@ export async function proxy(req: NextRequest) {
 
   if (isProtected && localToken) {
     try {
-      const secret = new TextEncoder().encode(process.env.LOCAL_JWT_SECRET);
+      const secret = new TextEncoder().encode(
+        process.env.LOCAL_JWT_SECRET ?? "your_secret",
+      );
       const { payload } = await jwtVerify(localToken, secret);
       const role = String(payload.role ?? "").toLowerCase();
 

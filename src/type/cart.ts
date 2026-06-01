@@ -24,5 +24,6 @@ export type CartContextValue = {
   removeItem: (productId: string) => void;
   incrementItem: (productId: string) => void;
   decrementItem: (productId: string) => void;
+  clearCart: () => void;
   getItemQuantity: (productId: string) => number;
 };

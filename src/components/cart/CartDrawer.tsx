@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { BASE_URL } from "@/app/base";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ function getImageUrl(src?: string) {
 }
 
 export function CartDrawer() {
+  const router = useRouter();
   const {
     items,
     totalItems,
@@ -41,6 +43,11 @@ export function CartDrawer() {
     decrementItem,
     removeItem,
   } = useCart();
+
+  const handleCheckout = () => {
+    setIsOpen(false);
+    router.push("/checkout");
+  };
 
   return (
     <Drawer open={isOpen} onOpenChange={setIsOpen} direction="right">
@@ -178,6 +185,7 @@ export function CartDrawer() {
           </div>
           <button
             type="button"
+            onClick={handleCheckout}
             disabled={items.length === 0}
             className="h-11 rounded-lg bg-amber-300 text-sm font-semibold text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/35"
           >
