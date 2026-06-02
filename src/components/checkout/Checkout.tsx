@@ -14,6 +14,7 @@ import {
 import { BASE_URL } from "@/app/base";
 import { useCart } from "@/components/cart/CartContext";
 import { Input } from "@/components/ui/input";
+import { log } from "node:console";
 
 type CheckoutStep = "address" | "payment";
 
@@ -65,7 +66,10 @@ function getProfileUser(payload: unknown): CheckoutProfile {
   if (!payload || typeof payload !== "object") return {};
   const root = payload as {
     user?: CheckoutProfile;
-    data?: CheckoutProfile & { user?: CheckoutProfile; profile?: CheckoutProfile };
+    data?: CheckoutProfile & {
+      user?: CheckoutProfile;
+      profile?: CheckoutProfile;
+    };
   };
 
   return root.data?.user ?? root.data?.profile ?? root.user ?? root.data ?? {};
@@ -83,7 +87,10 @@ export function Checkout() {
   const [successOpen, setSuccessOpen] = useState(false);
 
   const shipping = totalItems > 0 ? 0 : 0;
-  const grandTotal = useMemo(() => totalPrice + shipping, [totalPrice, shipping]);
+  const grandTotal = useMemo(
+    () => totalPrice + shipping,
+    [totalPrice, shipping],
+  );
 
   useEffect(() => {
     let active = true;
@@ -120,9 +127,7 @@ export function Checkout() {
       } catch (err) {
         if (active) {
           setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load your profile.",
+            err instanceof Error ? err.message : "Unable to load your profile.",
           );
         }
       } finally {
@@ -169,7 +174,7 @@ export function Checkout() {
           image: item.image,
         })),
         shippingAddress: {
-          fullName: address.fullName,
+          name: address.fullName,
           email: address.email,
           phone: address.phone,
           address: address.address,
@@ -182,6 +187,7 @@ export function Checkout() {
         shippingPrice: shipping,
         totalPrice: grandTotal,
       };
+      console.log(payload);
 
       const response = await fetch("/api/orders", {
         method: "POST",
@@ -364,7 +370,9 @@ export function Checkout() {
                         name="payment"
                         value={value}
                         checked={paymentMethod === value}
-                        onChange={(event) => setPaymentMethod(event.target.value)}
+                        onChange={(event) =>
+                          setPaymentMethod(event.target.value)
+                        }
                         className="accent-amber-300"
                       />
                       <span className="text-sm font-medium">{label}</span>

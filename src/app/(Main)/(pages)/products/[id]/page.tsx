@@ -47,7 +47,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   if (!product) notFound();
 
   const imageUrl = getImageUrl(product.images?.[0]);
-  const stockLabel = product.stock > 0 ? `${product.stock} in stock` : "Out of stock";
+  const stockLabel =
+    product.stock > 0 ? `${product.stock} in stock` : "Out of stock";
   const rating = Math.max(0, Math.min(5, Math.round(product.rating ?? 0)));
 
   return (
@@ -131,9 +132,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
           </div>
 
-          <div className="mt-8 space-y-3">
+          <div className="mt-8 space-y-3 flex flex-row gap-5">
             <ProductCartActions
               product={{
+                _id: product._id,
                 productId: product._id,
                 name: product.name,
                 price: product.price,

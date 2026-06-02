@@ -4,7 +4,6 @@ import { requireAuth } from "@/lib/server-auth";
 
 export async function DELETE() {
   const auth = await requireAuth();
-
   if (!auth) {
     return NextResponse.json(
       { success: false, message: "Login required" },
@@ -12,11 +11,10 @@ export async function DELETE() {
     );
   }
 
-  const response = await backendFetch("/api/cart/clear", {
-    method: "DELETE",
+  const response = await backendFetch("/api/cart/delete", {
+    method: "POST",
     token: auth.token,
   });
-
   const data = await response.json().catch(() => ({}));
 
   return NextResponse.json(data, { status: response.status });
