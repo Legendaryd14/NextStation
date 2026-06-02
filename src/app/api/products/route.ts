@@ -21,7 +21,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const body = await req.text();
+  const contentType = req.headers.get("content-type") ?? "";
+  const body = contentType.includes("multipart/form-data")
+    ? await req.formData()
+    : await req.text();
+
   const response = await backendFetch("/api/products", {
     method: "POST",
     token: auth.token,

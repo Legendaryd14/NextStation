@@ -94,7 +94,7 @@ export function mapBackendOrder(order: BackendOrder): DashboardOrder {
     (sum, item) => sum + (item.quantity ?? item.qty ?? 0),
     0,
   );
-
+  ``;
   return {
     id: order._id,
     orderNumber: order.orderNumber ?? order._id.slice(-8).toUpperCase(),

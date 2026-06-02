@@ -17,9 +17,10 @@ export async function DELETE(_req: Request, context: RouteContext) {
 
   const { id } = await context.params;
 
-  const response = await backendFetch(`/api/orders/${id}`, {
-    method: "DELETE",
+  const response = await backendFetch(`/api/orders/${id}/status`, {
+    method: "PUT",
     token: auth.token,
+    body: JSON.stringify({ status: "cancelled" }),
   });
   const data = await response.json().catch(() => ({}));
 

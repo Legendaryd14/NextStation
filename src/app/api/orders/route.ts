@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
   }
 
   const search = req.nextUrl.searchParams.toString();
-  const path = search ? `/api/orders?${search}` : "/api/orders";
+  const path = search
+    ? `/api/orders/admin/all?${search}`
+    : "/api/orders/admin/all";
 
   const response = await backendFetch(path, { token: auth.token });
   const data = await response.json().catch(() => ({}));

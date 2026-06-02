@@ -30,6 +30,21 @@ export interface Product {
   __v: number;
 }
 
+export type ProductCreateResponse = {
+  name: string;
+  brand: string;
+  category: string;
+  price: number;
+  stock: number;
+  rating?: number;
+  isActive: boolean;
+  description: string;
+  images: string[];
+  createdAt: string;
+};
+
+
+
 // API Response Type
 export interface ProductsResponse {
   success: boolean;

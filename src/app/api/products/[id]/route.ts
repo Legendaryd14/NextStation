@@ -25,7 +25,10 @@ export async function PUT(req: NextRequest, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const body = await req.text();
+  const contentType = req.headers.get("content-type") ?? "";
+  const body = contentType.includes("multipart/form-data")
+    ? await req.formData()
+    : await req.text();
 
   const response = await backendFetch(`/api/products/${id}`, {
     method: "PUT",

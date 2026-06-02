@@ -61,8 +61,8 @@ export default function OrdersPage() {
       await ordersApi.delete(orderId);
       setOrders((current) => current.filter((order) => order.id !== orderId));
     } catch (err) {
-      console.error("Delete order error", err);
-      setError("Failed to delete order.");
+      console.error("Cancel order error", err);
+      setError("Failed to cancel order.");
     }
   };
 
@@ -192,14 +192,16 @@ export default function OrdersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-muted-foreground">{order.date}</span>
+                      <span className="text-muted-foreground">
+                        {order.date}
+                      </span>
                     </td>
                     {isAdmin && (
                       <td className="px-6 py-4">
                         <button
                           onClick={() => deleteOrder(order.id)}
                           className="p-2 rounded bg-destructive hover:bg-destructive/80 text-destructive-foreground transition-colors group"
-                          title="Delete order"
+                          title="Cancel order"
                         >
                           <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
                         </button>

@@ -4,9 +4,14 @@ export class ApiError extends Error {
   constructor(message: string, status: number) {
     super(message);
     this.status = status;
+
+    // این خط را اضافه کنید تا زنجیره پروتوتایپ اصلاح شود
+    Object.setPrototypeOf(this, ApiError.prototype);
+
+    // اختیاری: تنظیم نام کلاس برای لاگ‌های بهتر
+    this.name = "ApiError";
   }
 }
-
 export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -49,12 +54,12 @@ export const productsApi = {
     return apiClient(`/api/products${query ? `?${query}` : ""}`);
   },
   get: (id: string) => apiClient(`/api/products/${id}`),
-  create: (body: unknown) =>
-    apiClient("/api/products", { method: "POST", body: JSON.stringify(body) }),
-  update: (id: string, body: unknown) =>
+  create: (body: BodyInit | Record<string, any> | FormData) =>
+    apiClient("/api/products", { method: "POST", body: body as BodyInit }),
+  update: (id: string, body: BodyInit | Record<string, any> | FormData) =>
     apiClient(`/api/products/${id}`, {
       method: "PUT",
-      body: JSON.stringify(body),
+      body: body as BodyInit,
     }),
   delete: (id: string) =>
     apiClient(`/api/products/${id}`, { method: "DELETE" }),
@@ -73,7 +78,6 @@ export const ordersApi = {
   },
   create: (body: unknown) =>
     apiClient("/api/orders", { method: "POST", body: JSON.stringify(body) }),
-  delete: (id: string) =>
-    apiClient(`/api/orders/${id}`, { method: "DELETE" }),
+  delete: (id: string) => apiClient(`/api/orders/${id}`, { method: "DELETE" }),
   stats: () => apiClient("/api/orders/stats"),
 };
