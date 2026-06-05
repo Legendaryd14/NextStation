@@ -1,4 +1,3 @@
-import { jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(req: NextRequest) {
@@ -16,7 +15,7 @@ export async function proxy(req: NextRequest) {
     "/auth",
     "/api/auth/refresh-token",
     "/api/auth/login",
-    "/api/auth/register",
+    "/api/auth/refreshToken",
   ];
 
   if (publicRoutes.some((route) => path.startsWith(route))) {
@@ -27,44 +26,41 @@ export async function proxy(req: NextRequest) {
   const isUserRoute = UserRoutes.some((route) => path.startsWith(route));
   const isProtected = isAdminRoute || isUserRoute;
 
-  const localToken = req.cookies.get("localToken")?.value;
+  const token = req.cookies.get("token")?.value;
 
-  if (isProtected && !localToken) {
+  if (isProtected && !token) {
     return redirectToLogin(isAdminRoute, req.url);
   }
 
-  if (isProtected && localToken) {
-    try {
-      const secret = new TextEncoder().encode(
-        process.env.LOCAL_JWT_SECRET ?? "your_secret",
-      );
-      const { payload } = await jwtVerify(localToken, secret);
-      const role = String(payload.role ?? "").toLowerCase();
+  if (isProtected && token) {
+    const role = req.cookies.get("role")?.value?.toLowerCase();
 
-      if (isAdminRoute && role !== "admin") {
-        return NextResponse.redirect(new URL("/login", req.url));
-      }
-      if (isUserRoute && !["user", "customer"].includes(role)) {
-        return NextResponse.redirect(new URL("/auth?status=login", req.url));
-      }
-
-      return NextResponse.next();
-    } catch (error) {
-      console.error("Local token invalid:", error);
+    if (isAdminRoute && role !== "admin") {
       return redirectToLogin(isAdminRoute, req.url);
     }
+    if (isUserRoute && !["user", "customer"].includes(role ?? "")) {
+      return redirectToLogin(isAdminRoute, req.url);
+    }
+
+    return NextResponse.next();
   }
 
   return NextResponse.next();
 }
 
 function redirectToLogin(isAdminRoute: boolean, currentUrl: string | URL) {
-  const response = NextResponse.redirect(
-    new URL(isAdminRoute ? "/login" : "/auth?status=login", currentUrl),
-  );
+  const url = new URL(currentUrl);
+  const loginUrl = new URL(isAdminRoute ? "/login" : "/auth", currentUrl);
+
+  if (!isAdminRoute) {
+    loginUrl.searchParams.set("status", "login");
+  }
+  loginUrl.searchParams.set("redirect", `${url.pathname}${url.search}`);
+
+  const response = NextResponse.redirect(loginUrl);
   response.cookies.delete("token");
   response.cookies.delete("refreshToken");
-  response.cookies.delete("localToken");
+
   response.cookies.delete("role");
   return response;
 }

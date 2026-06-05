@@ -8,20 +8,25 @@ import { useState } from "react";
 import { LoginFormData, SignupFormData } from "@/type/Auth";
 import LoginForm from "./login";
 import SignupForm from "./signup";
-import { BASE_URL } from "@/app/base";
 
 type AuthProps = {
   login: boolean;
   mode?: "admin" | "customer";
+  redirectTo?: string;
 };
 
-export function AuthComponent({ login, mode = "customer" }: AuthProps) {
+export function AuthComponent({
+  login,
+  mode = "customer",
+  redirectTo,
+}: AuthProps) {
   const isLogin = login;
   const isAdminLogin = mode === "admin";
 
   const router = useRouter();
   const pathname = usePathname();
   const authPath = pathname === "/login" ? "/login" : "/auth";
+  const redirectPath = getSafeRedirectPath(redirectTo);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
@@ -32,7 +37,7 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
     setIsSubmittingLogin(true);
 
     try {
-      const response = await fetch(`${BASE_URL}/auth/login`, {
+      const response = await fetch(`/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, loginFor: mode }),
@@ -52,7 +57,7 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
         throw new Error("Admin accounts must use the admin login.");
       }
 
-      router.push(isAdminLogin ? "/dashboard" : "/");
+      router.push(redirectPath ?? (isAdminLogin ? "/dashboard" : "/"));
       router.refresh();
     } catch (error) {
       setLoginError(
@@ -68,7 +73,7 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
     setIsSubmittingSignup(true);
 
     try {
-      const response = await fetch(`${BASE_URL}/auth/register`, {
+      const response = await fetch(`/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -85,7 +90,7 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
         throw new Error(result.message ?? "Registration failed");
       }
 
-      router.push("/");
+      router.push(redirectPath ?? "/");
       router.refresh();
     } catch (error) {
       setSignupError(
@@ -98,23 +103,23 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
 
   return (
     <div className="size-full flex items-center justify-center bg-transparent z-10">
-      <div className="w-full max-w-md px-6">
+      <div className="w-full max-w-lg px-6">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center mb-8">
           <Image
             src="/images/NextStationLogo.png"
             alt="logo"
-            width={60}
-            height={60}
+            width={68}
+            height={68}
             className="rounded-md"
           />
         </Link>
 
         {/* Card */}
-        <div className="bg-[#1c1c1c67] rounded-lg border border-[#42424282] p-8">
+        <div className="bg-[#1c1c1c67] rounded-xl border border-[#42424282] p-10">
           {isAdminLogin ? (
             <div className="mb-8 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#fe1929]">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-300">
                 Admin Access
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-white">
@@ -127,20 +132,25 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
           ) : (
             <div className="flex gap-2 mb-8 bg-zinc-950 rounded-lg p-1">
               <button
-                onClick={() => router.push(`${authPath}?status=login`)}
+                onClick={() =>
+                  router.push(getAuthHref(authPath, "login", redirectPath))
+                }
                 className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
                   isLogin
-                    ? "bg-[#fe1929] text-white"
+                    ? "bg-amber-400 text-zinc-950"
                     : "text-zinc-400 hover:text-white"
                 }`}
               >
                 Login
               </button>
+
               <button
-                onClick={() => router.push(`${authPath}?status=signup`)}
+                onClick={() =>
+                  router.push(getAuthHref(authPath, "signup", redirectPath))
+                }
                 className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
                   !isLogin
-                    ? "bg-[#fe1929] text-white"
+                    ? "bg-amber-400 text-zinc-950"
                     : "text-zinc-400 hover:text-white"
                 }`}
               >
@@ -196,6 +206,7 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
                   </svg>
                   Continue with Google
                 </button>
+
                 <button className="w-full bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
                   <svg
                     className="w-5 h-5"
@@ -218,10 +229,10 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
             <button
               onClick={() =>
                 isLogin
-                  ? router.push(`${authPath}?status=signup`)
-                  : router.push(`${authPath}?status=login`)
+                  ? router.push(getAuthHref(authPath, "signup", redirectPath))
+                  : router.push(getAuthHref(authPath, "login", redirectPath))
               }
-              className="text-[#fe1929] hover:text-[#a91620] transition-colors"
+              className="text-amber-300 hover:text-amber-400 transition-colors"
             >
               {isLogin ? "Sign up" : "Login"}
             </button>
@@ -230,4 +241,33 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
       </div>
     </div>
   );
+}
+
+function getSafeRedirectPath(redirectTo?: string) {
+  if (
+    !redirectTo ||
+    !redirectTo.startsWith("/") ||
+    redirectTo.startsWith("//")
+  ) {
+    return null;
+  }
+
+  if (redirectTo.startsWith("/login") || redirectTo.startsWith("/auth")) {
+    return null;
+  }
+
+  return redirectTo;
+}
+
+function getAuthHref(
+  authPath: string,
+  status: "login" | "signup",
+  redirectPath: string | null,
+) {
+  const params = new URLSearchParams({ status });
+  if (redirectPath) {
+    params.set("redirect", redirectPath);
+  }
+
+  return `${authPath}?${params.toString()}`;
 }

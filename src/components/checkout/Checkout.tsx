@@ -65,7 +65,10 @@ function getProfileUser(payload: unknown): CheckoutProfile {
   if (!payload || typeof payload !== "object") return {};
   const root = payload as {
     user?: CheckoutProfile;
-    data?: CheckoutProfile & { user?: CheckoutProfile; profile?: CheckoutProfile };
+    data?: CheckoutProfile & {
+      user?: CheckoutProfile;
+      profile?: CheckoutProfile;
+    };
   };
 
   return root.data?.user ?? root.data?.profile ?? root.user ?? root.data ?? {};
@@ -83,7 +86,10 @@ export function Checkout() {
   const [successOpen, setSuccessOpen] = useState(false);
 
   const shipping = totalItems > 0 ? 0 : 0;
-  const grandTotal = useMemo(() => totalPrice + shipping, [totalPrice, shipping]);
+  const grandTotal = useMemo(
+    () => totalPrice + shipping,
+    [totalPrice, shipping],
+  );
 
   useEffect(() => {
     let active = true;
@@ -120,9 +126,7 @@ export function Checkout() {
       } catch (err) {
         if (active) {
           setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load your profile.",
+            err instanceof Error ? err.message : "Unable to load your profile.",
           );
         }
       } finally {
@@ -183,7 +187,7 @@ export function Checkout() {
         totalPrice: grandTotal,
       };
 
-      const response = await fetch("/api/orders", {
+      const response = await fetch(`${BASE_URL}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -364,7 +368,9 @@ export function Checkout() {
                         name="payment"
                         value={value}
                         checked={paymentMethod === value}
-                        onChange={(event) => setPaymentMethod(event.target.value)}
+                        onChange={(event) =>
+                          setPaymentMethod(event.target.value)
+                        }
                         className="accent-amber-300"
                       />
                       <span className="text-sm font-medium">{label}</span>

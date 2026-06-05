@@ -1,172 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SignJWT } from "jose";
+import { BASE_URL } from "@/app/base";
 
-type LoginBody = {
-  email?: string;
-  password?: string;
-  loginFor?: "admin" | "customer";
+type LoginReq = {
+  email: string;
+  password: string;
 };
 
-type BackendLoginResponse = {
-  success?: boolean;
-  message?: string;
-  token?: string;
-  refreshToken?: string;
-  accessToken?: string;
-  user?: {
-    role?: string;
-    [key: string]: unknown;
-  };
-  data?: {
-    token?: string;
-    refreshToken?: string;
-    accessToken?: string;
-    user?: {
-      role?: string;
-      [key: string]: unknown;
+type BackendLoginRes = {
+  success: boolean;
+  message: string;
+  data: {
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
     };
-    [key: string]: unknown;
+    token: string;
+    refreshToken: string;
   };
 };
-
-const BACKEND_URL =
-  process.env.BACKEND_URL ??
-  process.env.NEXT_PUBLIC_BACKEND_URL ??
-  "http://localhost:5000";
-const LOCAL_JWT_SECRET = process.env.LOCAL_JWT_SECRET ?? "your_secret";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as LoginBody;
+    const data: LoginReq = await req.json();
 
-    if (!body.email || !body.password) {
-      return NextResponse.json(
-        { success: false, message: "Email and password are required" },
-        { status: 400 },
-      );
-    }
-
-    const loginFor = body.loginFor === "admin" ? "admin" : "customer";
-
-    const backendResponse = await fetch(`${BACKEND_URL}/api/auth/login`, {
+    const backendRes = await fetch(`${BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: body.email,
-        password: body.password,
-      }),
-      cache: "no-store",
+      body: JSON.stringify(data),
     });
 
-    const result = (await backendResponse.json()) as BackendLoginResponse;
+    const res: BackendLoginRes = await backendRes.json();
 
-    if (!backendResponse.ok || result.success === false) {
+    if (!backendRes.ok || !res.success || !res.data?.token) {
       return NextResponse.json(
-        {
-          success: false,
-          message: result.message ?? "Login failed",
-        },
-        { status: backendResponse.status || 401 },
-      );
-    }
-
-    const token =
-      result.data?.token ?? result.data?.accessToken ?? result.token ?? result.accessToken;
-    const refreshToken = result.data?.refreshToken ?? result.refreshToken;
-    const user = result.data?.user ?? result.user;
-    const role = user?.role?.toLowerCase();
-
-    if (!role) {
-      return NextResponse.json(
-        { success: false, message: "Unable to verify account role" },
-        { status: 403 },
-      );
-    }
-
-    if (loginFor === "admin" && role !== "admin") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Only admin accounts can use this login",
-        },
-        { status: 403 },
-      );
-    }
-
-    if (loginFor === "customer" && role === "admin") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Admin accounts must use the admin login",
-        },
-        { status: 403 },
+        { success: false, message: res.message || "خطا در ورود" },
+        { status: 401 },
       );
     }
 
     const response = NextResponse.json(
       {
         success: true,
-        message: result.message ?? "Login successful",
-        data: {
-          user: user ? { ...user, role } : user,
-        },
+        data: { user: res.data.user, message: res.message },
       },
       { status: 200 },
     );
 
-    if (token) {
-      response.cookies.set("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-        path: "/",
-      });
+    response.cookies.set("token", res.data.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
 
-      const localToken = await new SignJWT({
-        role,
-        userId: user?.id ?? user?._id,
-        email: user?.email,
-      })
-        .setProtectedHeader({ alg: "HS256" })
-        .setIssuedAt()
-        .setExpirationTime("7d")
-        .sign(new TextEncoder().encode(LOCAL_JWT_SECRET));
+    response.cookies.set("refreshToken", res.data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30,
+      path: "/",
+    });
 
-      response.cookies.set("localToken", localToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-        path: "/",
-      });
-    }
-
-    if (refreshToken) {
-      response.cookies.set("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 30,
-        path: "/",
-      });
-    }
-
-    if (role) {
-      response.cookies.set("role", role, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-        path: "/",
-      });
-    }
+    response.cookies.set("role", res.data.user.role, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: Number(process.env.JWT_EXPIRE_LOCAL_TOKEN_SET) || 60 * 60 * 24 * 7,
+      path: "/",
+    });
 
     return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(
-      { success: false, message: "Server error" },
+      { success: false, message: "Server Error" },
       { status: 500 },
     );
   }

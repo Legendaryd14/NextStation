@@ -1,4 +1,3 @@
-// components/auth/LoginForm.tsx
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -26,7 +25,10 @@ export default function LoginForm({
   });
 
   return (
-    <form onSubmit={loginForm.handleSubmit(onSubmit)} className="space-y-5">
+    <form
+      onSubmit={loginForm.handleSubmit(onSubmit)}
+      className="space-y-5 md:space-y-6"
+    >
       {/* Email */}
       <div>
         <Label
@@ -36,8 +38,10 @@ export default function LoginForm({
         >
           Email
         </Label>
+
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+
           <Input
             id="email"
             type="email"
@@ -49,7 +53,7 @@ export default function LoginForm({
               },
             })}
             error={loginForm.formState.errors.email?.message}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-600 transition-colors"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3.5 md:py-4 text-sm md:text-base text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-300/40 transition-all"
             placeholder="your@email.com"
           />
         </div>
@@ -64,8 +68,10 @@ export default function LoginForm({
         >
           Password
         </Label>
+
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+
           <Input
             id="password"
             type="password"
@@ -77,7 +83,7 @@ export default function LoginForm({
               },
             })}
             error={loginForm.formState.errors.password?.message}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-600 transition-colors"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3.5 md:py-4 text-sm md:text-base text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-300/40 transition-all"
             placeholder="Enter your password"
           />
         </div>
@@ -86,7 +92,7 @@ export default function LoginForm({
       <div className="flex justify-end">
         <button
           type="button"
-          className="text-sm text-white hover:text-zinc-400 transition-colors"
+          className="text-sm text-zinc-400 hover:text-amber-300 transition-colors"
         >
           Forgot password?
         </button>
@@ -101,7 +107,7 @@ export default function LoginForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-[#fe1929] hover:bg-[#a91620] text-white py-3 rounded-lg font-medium transition-colors mt-6"
+        className="w-full mt-6 py-3.5 md:py-4 rounded-xl bg-amber-300 hover:bg-amber-200 text-zinc-950 font-semibold text-sm md:text-base transition-all shadow-[0_6px_20px_rgba(252,211,77,0.25)] hover:shadow-[0_10px_28px_rgba(252,211,77,0.35)] disabled:opacity-60"
       >
         {isSubmitting ? "Logging in..." : "Login"}
       </button>

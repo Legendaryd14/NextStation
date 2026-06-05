@@ -1,8 +1,7 @@
-// components/auth/SignupForm.tsx
 "use client";
 
 import { useForm } from "react-hook-form";
-import { Mail, Lock, User, Phone } from "lucide-react";
+import { Mail, Lock, User } from "lucide-react";
 import { SignupFormData } from "@/type/Auth";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -28,7 +27,10 @@ export default function SignupForm({
   });
 
   return (
-    <form onSubmit={signupForm.handleSubmit(onSubmit)} className="space-y-5">
+    <form
+      onSubmit={signupForm.handleSubmit(onSubmit)}
+      className="space-y-5 md:space-y-6"
+    >
       {/* Name */}
       <div>
         <Label
@@ -38,8 +40,10 @@ export default function SignupForm({
         >
           Name
         </Label>
+
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+
           <Input
             id="name"
             type="text"
@@ -51,8 +55,8 @@ export default function SignupForm({
               },
             })}
             error={signupForm.formState.errors.name?.message}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-600 transition-colors"
-            placeholder="Choose a Name"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3.5 md:py-4 text-sm md:text-base text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-300/40 transition-all"
+            placeholder="Choose a name"
           />
         </div>
       </div>
@@ -66,8 +70,10 @@ export default function SignupForm({
         >
           Email
         </Label>
+
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+
           <Input
             id="email"
             type="email"
@@ -79,35 +85,7 @@ export default function SignupForm({
               },
             })}
             error={signupForm.formState.errors.email?.message}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-600 transition-colors"
-            placeholder="your@email.com"
-          />
-        </div>
-      </div>
-
-      {/* Phone */}
-      <div>
-        <Label
-          htmlFor="phone"
-          error={!!signupForm.formState.errors.email}
-          className="block text-sm text-zinc-400 mb-2"
-        >
-          Phone
-        </Label>
-        <div className="relative">
-          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-          <Input
-            id="phone"
-            type="phone"
-            {...signupForm.register("email", {
-              required: "Phone is required",
-              pattern: {
-                value: /^[1-9]\d{2}\.\d{3}\.\d{4}/i,
-                message: "Invalid number address",
-              },
-            })}
-            error={signupForm.formState.errors.number?.message}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-600 transition-colors"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3.5 md:py-4 text-sm md:text-base text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-300/40 transition-all"
             placeholder="your@email.com"
           />
         </div>
@@ -122,8 +100,10 @@ export default function SignupForm({
         >
           Password
         </Label>
+
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+
           <Input
             id="password"
             type="password"
@@ -135,7 +115,7 @@ export default function SignupForm({
               },
             })}
             error={signupForm.formState.errors.password?.message}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-600 transition-colors"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3.5 md:py-4 text-sm md:text-base text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-300/40 transition-all"
             placeholder="Enter your password"
           />
         </div>
@@ -150,7 +130,7 @@ export default function SignupForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-[#fe1929] hover:bg-[#a91620] text-white py-3 rounded-lg font-medium transition-colors mt-6 disabled:opacity-60"
+        className="w-full mt-6 py-3.5 md:py-4 rounded-xl bg-amber-300 hover:bg-amber-200 text-zinc-950 font-semibold text-sm md:text-base transition-all shadow-[0_6px_20px_rgba(252,211,77,0.25)] hover:shadow-[0_10px_28px_rgba(252,211,77,0.35)] disabled:opacity-60"
       >
         {isSubmitting ? "Creating account..." : "Create Account"}
       </button>
