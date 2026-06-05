@@ -8,9 +8,9 @@ import Link from "next/link";
 
 const HeroSection = () => {
   return (
-    <section className="relative w-screen h-screen">
+    <section className="relative w-screen h-screen min-w-screen">
       {/* تصویر پس‌زمینه - سمت راست */}
-      <div className="absolute right-0 top-0 h-full w-1/2 flex items-start justify-end">
+      <div className="absolute right-0 top-0 h-full w-1/2 flex items-start justify-end overflow-hidden">
         <Image
           src="/images/HeroImg.png"
           alt="Hero Background"
@@ -20,8 +20,8 @@ const HeroSection = () => {
           className="object-contain w-full h-auto animate-[zoomIn_12s_ease-in-out_infinite_alternate]"
         />
       </div>
-
-      {/* <div className="absolute inset-0 bg-gradient-to-r from-[#030405]/90 via-[#030405]/70 to-transparent" /> */}
+      {/* 
+      <div className="absolute inset-0 bg-gradient-to-r from-[#030405]/90 via-[#030405]/70 to-transparent" /> */}
       {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_40%,rgba(255,255,255,0.08)_0%,transparent_60%)]" /> */}
 
       <motion.div

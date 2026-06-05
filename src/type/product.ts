@@ -24,3 +24,18 @@ export interface Product {
   updatedAt: string;
   __v: number;
 }
+
+export type GetProductsParams = {
+  search?: string;
+  category?: string;
+  brand?: string;
+  id?: string;
+  limit?: string;
+  page?: string;
+};
+export type Param = {
+  category?: string;
+  brand?: string;
+  search?: string;
+  page?: string;
+};
