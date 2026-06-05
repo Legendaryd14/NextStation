@@ -44,3 +44,10 @@ export type SingelProduct = {
   success: boolean;
   data: Product;
 };
+
+export function getTotalPages(response: {
+  pages?: number;
+  totalPages?: number;
+}): number {
+  return response.pages ?? response.totalPages ?? 1;
+}

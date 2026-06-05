@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     if (!backendRes.ok || !res.success || !res.data?.token) {
       return NextResponse.json(
-        { success: false, message: res.message || "خطا در ورود" },
+        { success: false, message: res.message || "Error Login" },
         { status: 401 },
       );
     }
@@ -69,7 +69,8 @@ export async function POST(req: NextRequest) {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: Number(process.env.JWT_EXPIRE_LOCAL_TOKEN_SET) || 60 * 60 * 24 * 7,
+      maxAge:
+        Number(process.env.JWT_EXPIRE_LOCAL_TOKEN_SET) || 60 * 60 * 24 * 7,
       path: "/",
     });
 

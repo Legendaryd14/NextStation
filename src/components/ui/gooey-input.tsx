@@ -79,19 +79,16 @@ export interface GooeyInputProps {
   placeholder?: string;
   className?: string;
   classNames?: GooeyInputClassNames;
-  /** Collapsed control width in px */
   collapsedWidth?: number;
-  /** Expanded control width in px */
   expandedWidth?: number;
-  /** Horizontal offset when expanded (px), aligns detached bubble */
   expandedOffset?: number;
-  /** Gaussian blur amount for the gooey SVG filter */
   gooeyBlur?: number;
   value?: string;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
   onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
+  onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function GooeyInput({
@@ -107,6 +104,7 @@ export function GooeyInput({
   onValueChange,
   onOpenChange,
   disabled = false,
+  onChange,
 }: GooeyInputProps) {
   const reactId = useId();
   const safeId = reactId.replace(/:/g, "");
@@ -116,6 +114,7 @@ export function GooeyInput({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const prevExpandedRef = useRef(false);
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
 
@@ -163,9 +162,12 @@ export function GooeyInput({
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
-      setSearchText(e.target.value);
+      const nextValue = e.target.value;
+
+      setSearchText(nextValue);
+      onChange?.(e);
     },
-    [setSearchText],
+    [setSearchText, onChange],
   );
 
   const handleBlur = useCallback(() => {
@@ -213,6 +215,7 @@ export function GooeyInput({
             )}
           >
             {!isExpanded ? <SearchIcon layoutId={iconLayoutId} /> : null}
+
             <motion.input
               layoutId={inputLayoutId}
               ref={inputRef}

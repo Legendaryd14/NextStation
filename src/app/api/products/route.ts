@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { backendFetch } from "@/lib/backend";
 import { requireAdmin } from "@/lib/server-auth";
+import { backendFetch } from "@/lib/backend";
+import { BASE_URL } from "@/app/base";
 
 export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams.toString();
-  const path = search ? `/api/products?${search}` : "/api/products";
+  const path = search
+    ? `${BASE_URL}/products?${search}`
+    : `${BASE_URL}/products`;
 
   const response = await backendFetch(path);
   const data = await response.json().catch(() => ({}));
@@ -22,11 +25,11 @@ export async function POST(req: NextRequest) {
   }
 
   const contentType = req.headers.get("content-type") ?? "";
-  const body = contentType.includes("multipart/form-data")
+  const body = contentType.includes("application/json")
     ? await req.formData()
     : await req.text();
 
-  const response = await backendFetch("/api/products", {
+  const response = await backendFetch(`${BASE_URL}/products`, {
     method: "POST",
     token: auth.token,
     body,

@@ -10,25 +10,12 @@ import {
   MobileNavToggle,
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
-import {
-  Car,
-  Compass,
-  Crosshair,
-  Gamepad2,
-  SearchIcon,
-  Swords,
-} from "lucide-react";
+import { Car, Compass, Crosshair, Gamepad2, Swords } from "lucide-react";
 import { useState } from "react";
 
 import React from "react";
 import { AnimatedThemeToggler } from "../ui/animated-theme-toggler";
-import { SearchButton } from "./Searchbutton";
-import {
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalTrigger,
-} from "../ui/animated-modal";
+
 import { GooeyInput } from "../ui/gooey-input";
 import { CartTrigger } from "../cart/CartTrigger";
 
@@ -87,38 +74,20 @@ export function NavbarComponent() {
   return (
     <div className="relative w-full">
       <Navbar>
-        <Modal>
-          {/* Desktop Navigation */}
-          <NavBody>
-            <NavbarLogo />
-            <NavItems items={navItems} />
-            <div className="flex items-center gap-4">
-              <NavbarButton variant="primary" href="/auth?status=login">
-                Login
-              </NavbarButton>
-              <CartTrigger />
-              <NavbarButton variant="secondary">
-                <ModalTrigger>
-                  <SearchIcon />
-                </ModalTrigger>
-                <ModalBody>
-                  <ModalContent className="w-screen h-screen">
-                    <GooeyInput
-                      placeholder="Search..."
-                      collapsedWidth={200}
-                      expandedWidth={300}
-                      gooeyBlur={100}
-                      expandedOffset={100}
-                    />
-                  </ModalContent>
-                </ModalBody>
-              </NavbarButton>
-              <NavbarButton variant="secondary">
-                <AnimatedThemeToggler className="h-10 w-10" />
-              </NavbarButton>
-            </div>
-          </NavBody>
-        </Modal>
+        {/* Desktop Navigation */}
+        <NavBody>
+          <NavbarLogo />
+          <NavItems items={navItems} />
+          <div className="flex items-center gap-4">
+            <NavbarButton variant="primary" href="/auth?status=login">
+              Login
+            </NavbarButton>
+            <CartTrigger />
+            <NavbarButton variant="secondary">
+              <GooeyInput placeholder="Search..." />
+            </NavbarButton>
+          </div>
+        </NavBody>
 
         {/* Mobile Navigation */}
         <MobileNav>

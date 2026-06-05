@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { backendFetch } from "@/lib/backend";
+
 import { requireAdmin } from "@/lib/server-auth";
+import { backendFetch } from "@/lib/backend";
+import { BASE_URL } from "@/app/base";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -9,7 +11,7 @@ type RouteContext = {
 export async function GET(_req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
-  const response = await backendFetch(`/api/products/${id}`);
+  const response = await backendFetch(`${BASE_URL}/products/${id}`);
   const data = await response.json().catch(() => ({}));
 
   return NextResponse.json(data, { status: response.status });
@@ -30,7 +32,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     ? await req.formData()
     : await req.text();
 
-  const response = await backendFetch(`/api/products/${id}`, {
+  const response = await backendFetch(`${BASE_URL}/products/${id}`, {
     method: "PUT",
     token: auth.token,
     body,
@@ -51,7 +53,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
 
-  const response = await backendFetch(`/api/products/${id}`, {
+  const response = await backendFetch(`${BASE_URL}/products/${id}`, {
     method: "DELETE",
     token: auth.token,
   });

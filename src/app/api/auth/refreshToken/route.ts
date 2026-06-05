@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const { refreshToken } = await req.json();
     if (!refreshToken) {
       return NextResponse.json(
-        { success: false, message: "Refresh Token is required " },
+        { success: false, message: "Refresh Token is ExpiredW " },
         { status: 400 },
       );
     }
@@ -66,7 +66,8 @@ export async function POST(req: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: Number(process.env.JWT_EXPIRE_REFRESH_TOKEN) || 60 * 60 * 24 * 30,
+        maxAge:
+          Number(process.env.JWT_EXPIRE_REFRESH_TOKEN) || 60 * 60 * 24 * 30,
         path: "/",
       });
     }

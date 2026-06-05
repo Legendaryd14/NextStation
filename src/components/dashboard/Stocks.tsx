@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ProductType, ProductsResponse, getTotalPages } from "@/type/product";
-import { BASE_URL } from "@/app/base";
+import { Product, ProductResponse, getTotalPages } from "@/type/product";
+import { IMAGE_BASE_URL } from "@/app/base";
 import { productsApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
@@ -16,7 +16,7 @@ import {
 } from "./dashboardStyles";
 
 export default function StocksComponent() {
-  const [products, setProducts] = useState<ProductType[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState("");
@@ -31,8 +31,8 @@ export default function StocksComponent() {
         const res = (await productsApi.list({
           page,
           limit,
-        })) as ProductsResponse & {
-          data: ProductType[];
+        })) as ProductResponse & {
+          data: Product[];
         };
 
         if (ignore) return;
@@ -78,7 +78,7 @@ export default function StocksComponent() {
           <tbody>
             {products.map((product) => {
               const imageUrl = product.images?.[0]
-                ? `${BASE_URL}${product.images[0]}`
+                ? `${IMAGE_BASE_URL}/uploads/${product.images[0]}`
                 : "/placeholder.png";
 
               return (

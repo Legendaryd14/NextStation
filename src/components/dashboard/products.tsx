@@ -522,6 +522,8 @@ export default function ProductsPage() {
               <div>
                 <Label>Product Images</Label>
 
+                <div>{}</div>
+
                 <FileUpload
                   onChange={(files) => {
                     setSelectedImages(files as File[]);
