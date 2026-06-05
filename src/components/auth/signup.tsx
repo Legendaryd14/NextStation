@@ -2,7 +2,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { Mail, Lock, User } from "lucide-react";
+import { Mail, Lock, User, Phone } from "lucide-react";
 import { SignupFormData } from "@/type/Auth";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -23,6 +23,7 @@ export default function SignupForm({
       name: "",
       email: "",
       password: "",
+      phone: "",
     },
   });
 
@@ -78,6 +79,34 @@ export default function SignupForm({
               },
             })}
             error={signupForm.formState.errors.email?.message}
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-600 transition-colors"
+            placeholder="your@email.com"
+          />
+        </div>
+      </div>
+
+      {/* Phone */}
+      <div>
+        <Label
+          htmlFor="phone"
+          error={!!signupForm.formState.errors.email}
+          className="block text-sm text-zinc-400 mb-2"
+        >
+          Phone
+        </Label>
+        <div className="relative">
+          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+          <Input
+            id="phone"
+            type="phone"
+            {...signupForm.register("email", {
+              required: "Phone is required",
+              pattern: {
+                value: /^[1-9]\d{2}\.\d{3}\.\d{4}/i,
+                message: "Invalid number address",
+              },
+            })}
+            error={signupForm.formState.errors.number?.message}
             className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-600 transition-colors"
             placeholder="your@email.com"
           />

@@ -1,133 +1,65 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ProductType, ProductsResponse, getTotalPages } from "@/type/productRes";
-import { productsApi } from "@/lib/api";
-import { ProductCard } from "./productCard";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ProductCard } from "./ProductCard";
+import { ProductResponse } from "@/type/product";
 
-type ProductsGridProps = {
-  category?: string;
-  title?: string;
-  description?: string;
-};
+interface ProductsGridProps {
+  products: ProductResponse;
+  page: number;
+}
 
-const limit = 9;
-
-export default function ProductsGrid({
-  category,
-  title = "Products",
-  description,
-}: ProductsGridProps) {
-  const [products, setProducts] = useState<ProductType[]>([]);
+export default function ProductsGrid({ products, page }: ProductsGridProps) {
+  const router = useRouter();
   const [hovered, setHovered] = useState<number | null>(null);
-  const [pageState, setPageState] = useState({ category, page: 1 });
-  const [totalPages, setTotalPages] = useState(1);
-  const [error, setError] = useState("");
 
-  const page = pageState.category === category ? pageState.page : 1;
+  const limit = 16;
+  const totalPages = Math.ceil(products.total / limit);
 
-  const updatePage = (getNextPage: (currentPage: number) => number) => {
-    setPageState((current) => {
-      const currentPage = current.category === category ? current.page : 1;
+  const updatePage = (newPage: number) => {
+    const params = new URLSearchParams(window.location.search);
 
-      return {
-        category,
-        page: getNextPage(currentPage),
-      };
-    });
+    params.set("page", newPage.toString());
+
+    router.push(`/products?${params.toString()}`);
   };
 
-  useEffect(() => {
-    let ignore = false;
-
-    async function fetchProducts() {
-      const params: Record<string, string | number> = { page, limit };
-      if (category) params.category = category;
-
-      try {
-        const res = (await productsApi.list(params)) as ProductsResponse & {
-          data: ProductType[];
-        };
-
-        if (ignore) return;
-
-        setError("");
-        setProducts(res.data ?? []);
-        setTotalPages(getTotalPages(res));
-      } catch (err) {
-        console.error("Fetch products error", err);
-
-        if (ignore) return;
-
-        setProducts([]);
-        setError("Unable to load products right now.");
-      }
-    }
-
-    void fetchProducts();
-
-    return () => {
-      ignore = true;
-    };
-  }, [category, page]);
-
   return (
-    <div className="mx-auto mt-30 flex max-w-7xl gap-8 px-4 py-10">
-      <div className="flex-1 gap-1.5">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-white">{title}</h1>
-          {description && (
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">
-              {description}
-            </p>
-          )}
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6">
+        {products.data.map((product, index) => (
+          <ProductCard
+            key={product._id}
+            product={product}
+            index={index}
+            hovered={hovered}
+            setHovered={setHovered}
+          />
+        ))}
+      </div>
 
-        {error && (
-          <div className="rounded-lg border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">
-            {error}
-          </div>
-        )}
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-center gap-4 pt-10 text-white">
+        <button
+          disabled={page <= 1}
+          onClick={() => updatePage(page - 1)}
+          className="rounded border border-white/20 px-4 py-2 transition-colors hover:bg-white/10 disabled:opacity-30"
+        >
+          Previous
+        </button>
 
-        {!error && products.length === 0 && (
-          <div className="rounded-lg border border-white/10 bg-white/5 p-8 text-center text-sm text-white/60">
-            No products found in this category.
-          </div>
-        )}
+        <span className="text-sm font-medium">
+          Page {page} of {totalPages}
+        </span>
 
-        <div className="grid grid-cols-2 gap-5 md:grid-cols-3">
-          {products.map((product, index) => (
-            <ProductCard
-              key={product._id}
-              product={product}
-              index={index}
-              hovered={hovered}
-              setHovered={setHovered}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center justify-center gap-4 pt-10">
-          <button
-            disabled={page === 1}
-            onClick={() => updatePage((currentPage) => currentPage - 1)}
-            className="rounded border px-3 py-1 disabled:opacity-40"
-          >
-            Prev
-          </button>
-
-          <span className="text-sm">
-            Page {page} / {totalPages}
-          </span>
-
-          <button
-            disabled={page === totalPages}
-            onClick={() => updatePage((currentPage) => currentPage + 1)}
-            className="rounded border px-3 py-1 disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
+        <button
+          disabled={page >= totalPages}
+          onClick={() => updatePage(page + 1)}
+          className="rounded border border-white/20 px-4 py-2 transition-colors hover:bg-white/10 disabled:opacity-30"
+        >
+          Next
+        </button>
       </div>
     </div>
   );

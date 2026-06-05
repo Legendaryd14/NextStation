@@ -1,4 +1,4 @@
-import ProductsGrid from "@/components/Home/product/productGrid";
+import ProductsGrid from "@/components/Home/product/ProductGrid";
 import type { Metadata } from "next";
 
 type CategoryPageProps = {

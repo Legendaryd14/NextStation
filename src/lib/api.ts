@@ -1,3 +1,5 @@
+import { BASE_URL } from "@/app/base";
+
 export class ApiError extends Error {
   status: number;
 
@@ -51,18 +53,21 @@ export const productsApi = {
       }
     });
     const query = search.toString();
-    return apiClient(`/api/products${query ? `?${query}` : ""}`);
+    return apiClient(`${BASE_URL}/products${query ? `?${query}` : ""}`);
   },
-  get: (id: string) => apiClient(`/api/products/${id}`),
+  get: (id: string) => apiClient(`${BASE_URL}/products/${id}`),
   create: (body: BodyInit | Record<string, any> | FormData) =>
-    apiClient("/api/products", { method: "POST", body: body as BodyInit }),
+    apiClient(`${BASE_URL}/products`, {
+      method: "POST",
+      body: body as BodyInit,
+    }),
   update: (id: string, body: BodyInit | Record<string, any> | FormData) =>
-    apiClient(`/api/products/${id}`, {
+    apiClient(`${BASE_URL}/products/${id}`, {
       method: "PUT",
       body: body as BodyInit,
     }),
   delete: (id: string) =>
-    apiClient(`/api/products/${id}`, { method: "DELETE" }),
+    apiClient(`${BASE_URL}/products/${id}`, { method: "DELETE" }),
 };
 
 export const ordersApi = {
@@ -74,10 +79,24 @@ export const ordersApi = {
       }
     });
     const query = search.toString();
-    return apiClient(`/api/orders${query ? `?${query}` : ""}`);
+    return apiClient(`${BASE_URL}/orders${query ? `?${query}` : ""}`, {
+      method: "GET",
+      credentials: "include",
+    });
   },
   create: (body: unknown) =>
-    apiClient("/api/orders", { method: "POST", body: JSON.stringify(body) }),
-  delete: (id: string) => apiClient(`/api/orders/${id}`, { method: "DELETE" }),
-  stats: () => apiClient("/api/orders/stats"),
+    apiClient(`${BASE_URL}/orders`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string) =>
+    apiClient(`${BASE_URL}/orders/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    }),
+  stats: (id: string) =>
+    apiClient(`${BASE_URL}/orders/${id}/status`, {
+      method: "PUT",
+      credentials: "include",
+    }),
 };

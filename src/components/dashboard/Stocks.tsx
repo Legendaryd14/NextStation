@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ProductType, ProductsResponse, getTotalPages } from "@/type/productRes";
+import { ProductType, ProductsResponse, getTotalPages } from "@/type/product";
 import { BASE_URL } from "@/app/base";
 import { productsApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,10 @@ export default function StocksComponent() {
 
     async function fetchProducts() {
       try {
-        const res = await productsApi.list({ page, limit }) as ProductsResponse & {
+        const res = (await productsApi.list({
+          page,
+          limit,
+        })) as ProductsResponse & {
           data: ProductType[];
         };
 

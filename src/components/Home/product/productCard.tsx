@@ -4,12 +4,13 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Star } from "lucide-react";
-import { BASE_URL } from "@/app/base";
-import { ProductType } from "@/type/productRes";
+import { Product } from "@/type/product";
 import { useRouter } from "next/navigation";
 
+const imageSrc = "http://localhost:5000";
+
 interface ProductCardProps {
-  product: ProductType;
+  product: Product;
   index: number;
   hovered: number | null;
   setHovered: (index: number | null) => void;
@@ -20,7 +21,7 @@ export const ProductCard = React.memo(
     const router = useRouter();
 
     const imageUrl = product.images?.[0]
-      ? `${BASE_URL}${product.images[0]}`
+      ? `${imageSrc}${product.images[0]}`
       : "/placeholder.png";
 
     const goToSingleProduct = () => {
@@ -33,7 +34,7 @@ export const ProductCard = React.memo(
           onMouseEnter={() => setHovered(index)}
           onMouseLeave={() => setHovered(null)}
           className={cn(
-            "rounded-lg relative overflow-hidden h-60 md:h-72 w-full bg-gray-100 dark:bg-neutral-900 transition-all duration-300 ease-out cursor-pointer",
+            "rounded-lg relative overflow-hidden h-60 md:h-72 w-full bg-gray-100 dark:bg-neutral-900 transition-all duration-300 ease-out cursor-pointer aspect-[4/5]",
             hovered !== null && hovered !== index && "blur-sm scale-[0.97]",
           )}
         >

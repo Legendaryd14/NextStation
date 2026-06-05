@@ -8,6 +8,7 @@ import { useState } from "react";
 import { LoginFormData, SignupFormData } from "@/type/Auth";
 import LoginForm from "./login";
 import SignupForm from "./signup";
+import { BASE_URL } from "@/app/base";
 
 type AuthProps = {
   login: boolean;
@@ -31,7 +32,7 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
     setIsSubmittingLogin(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, loginFor: mode }),
@@ -67,14 +68,14 @@ export function AuthComponent({ login, mode = "customer" }: AuthProps) {
     setIsSubmittingSignup(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch(`${BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: data.name,
           email: data.email,
           password: data.password,
-          ...(data.phone ? { phone: data.phone } : {}),
+          phone: data.phone,
         }),
       });
 

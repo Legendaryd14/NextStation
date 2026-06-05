@@ -1,6 +1,6 @@
 import { BASE_URL } from "@/app/base";
 import { ProductCartActions } from "@/components/cart/ProductCartActions";
-import { Product } from "@/type/productRes";
+import { Product } from "@/type/product";
 import { PackageCheck, ShieldCheck, Star, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -132,10 +132,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
           </div>
 
-          <div className="mt-8 space-y-3 flex flex-row gap-5">
+          <div className="mt-8 space-y-3">
             <ProductCartActions
               product={{
-                _id: product._id,
                 productId: product._id,
                 name: product.name,
                 price: product.price,

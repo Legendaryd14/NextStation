@@ -9,14 +9,14 @@ export default function HomeLayout({
 }>) {
   return (
     <section className="min-h-full flex flex-col">
-      <div className="w-screen h-screen relative ">
+      <div className="w-screen h-screen  ">
         <SparklesCore
           id="tsparticlesfullpage"
           background="#000000"
           minSize={0.6}
           maxSize={1.4}
           particleDensity={10}
-          className="w-full h-full fixed z-[-1] overflow-x-hidden"
+          className="w-screen h-full fixed z-[-1] "
           particleColor={cn()}
         />
         {children}

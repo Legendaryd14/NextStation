@@ -8,9 +8,9 @@ import { SocialProofCard } from "./socialProofCard";
 
 function SocialProof() {
   return (
-    <div className="relative p-10 flex flex-col gap-10 items-center overflow-x-hidden">
+    <div className="relative p-10 flex flex-col gap-10 items-center w-screen">
       <h1 className="font-semibold text-3xl">Our brands </h1>
-      <Marquee className="" pauseOnHover repeat={3}>
+      <Marquee className="w-screen overflow-x" pauseOnHover repeat={3}>
         {socialProofCarditems.map((cards) => {
           return <SocialProofCard key={cards.id} {...cards} />;
         })}

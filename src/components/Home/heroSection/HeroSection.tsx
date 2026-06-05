@@ -4,24 +4,25 @@ import Image from "next/image";
 import React from "react";
 import { motion } from "framer-motion";
 import { TextHoverEffect } from "@/components/ui/text-hover-effect";
+import Link from "next/link";
 
 const HeroSection = () => {
   return (
-    <section className="relative w-full h-screen overflow-hidden">
+    <section className="relative w-screen h-screen">
       {/* تصویر پس‌زمینه - سمت راست */}
       <div className="absolute right-0 top-0 h-full w-1/2 flex items-start justify-end">
         <Image
           src="/images/HeroImg.png"
           alt="Hero Background"
-          height={800}
-          width={800}
+          height={750}
+          width={750}
           priority
           className="object-contain w-full h-auto animate-[zoomIn_12s_ease-in-out_infinite_alternate]"
         />
       </div>
 
-      <div className="absolute inset-0 bg-gradient-to-r from-[#030405]/90 via-[#030405]/70 to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_40%,rgba(255,255,255,0.08)_0%,transparent_60%)]" />
+      {/* <div className="absolute inset-0 bg-gradient-to-r from-[#030405]/90 via-[#030405]/70 to-transparent" /> */}
+      {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_40%,rgba(255,255,255,0.08)_0%,transparent_60%)]" /> */}
 
       <motion.div
         initial={{ opacity: 0, y: 40 }}
@@ -55,8 +56,8 @@ const HeroSection = () => {
         </p>
 
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 mt-6">
-          <a
-            href="#products"
+          <Link
+            href="/products"
             className="group inline-flex items-center px-7 py-3 rounded-xl bg-gradient-to-r from-[#ffffff33] to-[#ffffff22]
               hover:from-[#ffffff55] hover:to-[#ffffff33] transition-all duration-300 shadow-lg text-white font-medium backdrop-blur-md"
           >
@@ -75,15 +76,15 @@ const HeroSection = () => {
               />
             </svg>
             Get Started
-          </a>
+          </Link>
 
-          <a
-            href="#explore"
+          <Link
+            href="/contact"
             className="inline-flex items-center px-7 py-3 rounded-xl border border-white/30 hover:bg-white/10
               transition-all duration-300 text-white/90 font-semibold backdrop-blur-sm"
           >
             Explore More
-          </a>
+          </Link>
         </div>
 
         <div className="flex flex-wrap gap-12 mt-10">

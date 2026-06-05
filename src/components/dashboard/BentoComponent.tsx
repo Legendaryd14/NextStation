@@ -16,7 +16,7 @@ import { dashboardPageClass, dashboardPanelClass } from "./dashboardStyles";
 import { useTheme } from "next-themes";
 import { ordersApi, productsApi } from "@/lib/api";
 import { OrderStatsResponse } from "@/type/order";
-import { ProductsResponse } from "@/type/productRes";
+import { ProductsResponse } from "@/type/product";
 
 type ChartPoint = { name: string; uv: number; pv: number };
 

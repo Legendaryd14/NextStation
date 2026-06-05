@@ -6,11 +6,7 @@ import { Trash2 } from "lucide-react";
 
 import Image from "next/image";
 
-import {
-  ProductType,
-  ProductsResponse,
-  getTotalPages,
-} from "@/type/productRes";
+import { ProductType, ProductsResponse, getTotalPages } from "@/type/product";
 
 import { BASE_URL } from "@/app/base";
 

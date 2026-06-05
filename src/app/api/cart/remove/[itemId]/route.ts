@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import { backendFetch } from "@/lib/backend";
 import { requireAuth } from "@/lib/server-auth";
 
-export async function DELETE() {
+type RouteContext = {
+  params: Promise<{ itemId: string }>;
+};
+
+export async function DELETE(_req: Request, context: RouteContext) {
   const auth = await requireAuth();
+
   if (!auth) {
     return NextResponse.json(
       { success: false, message: "Login required" },
@@ -11,11 +16,13 @@ export async function DELETE() {
     );
   }
 
-  const response = await backendFetch("/api/cart/clear", {
+  const { itemId } = await context.params;
+
+  const response = await backendFetch(`/api/cart/remove/${itemId}`, {
     method: "DELETE",
     token: auth.token,
   });
-  const data = await response.json().catch(() => ({}));
 
+  const data = await response.json().catch(() => ({}));
   return NextResponse.json(data, { status: response.status });
 }

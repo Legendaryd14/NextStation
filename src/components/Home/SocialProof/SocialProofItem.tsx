@@ -23,7 +23,7 @@ const socialProofItem: SocialProofItem[] = [
   {
     id: 3,
     name: "Ubisoft Connect",
-    logo: "svg/183407.svg",
+    logo: "svg/icons8-ubisoft.svg",
     url: "https://www.ubisoft.com/en-gb/ubisoft-connect",
     alt: "UbisoftConnect",
     featured: false,
