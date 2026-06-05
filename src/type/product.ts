@@ -39,3 +39,8 @@ export type Param = {
   search?: string;
   page?: string;
 };
+
+export type SingelProduct = {
+  success: boolean;
+  data: Product;
+};

@@ -1,4 +1,5 @@
 import { BASE_URL } from "@/app/base";
+import { SingelProduct } from "@/type/product";
 
 export class ApiError extends Error {
   status: number;
@@ -44,23 +45,24 @@ export async function apiClient<T>(
   return data;
 }
 
+export const getProductByID = async (id: string): Promise<SingelProduct> => {
+  const res = await fetch(`${BASE_URL}/products/${id}`);
+
+  if (!res.ok) {
+    throw new Error("Failed to Fetch Your Product");
+  }
+
+  return await res.json();
+};
+
 export const productsApi = {
-  list: (params: Record<string, string | number | undefined>) => {
-    const search = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== "") {
-        search.set(key, String(value));
-      }
-    });
-    const query = search.toString();
-    return apiClient(`${BASE_URL}/products${query ? `?${query}` : ""}`);
-  },
   get: (id: string) => apiClient(`${BASE_URL}/products/${id}`),
   create: (body: BodyInit | Record<string, any> | FormData) =>
     apiClient(`${BASE_URL}/products`, {
       method: "POST",
       body: body as BodyInit,
     }),
+
   update: (id: string, body: BodyInit | Record<string, any> | FormData) =>
     apiClient(`${BASE_URL}/products/${id}`, {
       method: "PUT",

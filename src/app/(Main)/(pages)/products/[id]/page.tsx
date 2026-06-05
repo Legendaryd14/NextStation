@@ -1,25 +1,14 @@
-import { BASE_URL } from "@/app/base";
+import { IMAGE_BASE_URL } from "@/app/base";
 import { ProductCartActions } from "@/components/cart/ProductCartActions";
-import { Product } from "@/type/product";
+import { getProductByID } from "@/lib/api";
 import { PackageCheck, ShieldCheck, Star, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-type ProductResponse = {
-  success: boolean;
-  data?: Product;
-};
-
 type ProductPageProps = {
   params: Promise<{ id: string }>;
 };
-
-function getImageUrl(src?: string) {
-  if (!src) return null;
-  if (src.startsWith("http://") || src.startsWith("https://")) return src;
-  return `${BASE_URL}${src}`;
-}
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-US", {
@@ -29,24 +18,20 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
-async function getProduct(id: string): Promise<Product | null> {
-  const res = await fetch(`${BASE_URL}/api/products/${id}`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) return null;
-
-  const product: ProductResponse = await res.json();
-  return product.data ?? null;
-}
-
 export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params;
-  const product = await getProduct(id);
+  const productResponse = await getProductByID(id);
 
-  if (!product) notFound();
+  if (!productResponse || !productResponse.data) {
+    notFound();
+  }
 
-  const imageUrl = getImageUrl(product.images?.[0]);
+  const product = productResponse.data;
+
+  const imageUrl = product.images?.[0]
+    ? `${IMAGE_BASE_URL}${product.images[0]}`
+    : null;
+
   const stockLabel =
     product.stock > 0 ? `${product.stock} in stock` : "Out of stock";
   const rating = Math.max(0, Math.min(5, Math.round(product.rating ?? 0)));
@@ -57,10 +42,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
         href="/products"
         className="mb-6 inline-flex text-sm font-medium text-neutral-500 transition hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
       >
-        Back to products
+        ← Back to products
       </Link>
 
       <section className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:items-start">
+        {/* بخش تصویر */}
         <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-neutral-950 shadow-2xl shadow-black/30">
           {imageUrl ? (
             <Image
@@ -79,6 +65,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           )}
         </div>
 
+        {/* بخش جزئیات محصول */}
         <div className="rounded-lg border border-white/10 bg-black/45 p-6 text-white shadow-xl backdrop-blur md:p-8">
           <div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-wide text-amber-300">
             <span>{product.brand}</span>
@@ -132,7 +119,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
           </div>
 
-          <div className="mt-8 space-y-3">
+          <div className="mt-8 space-y-3 flex flex-col">
             <ProductCartActions
               product={{
                 productId: product._id,

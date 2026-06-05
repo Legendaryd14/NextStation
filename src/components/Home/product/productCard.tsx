@@ -7,7 +7,7 @@ import { Star } from "lucide-react";
 import { Product } from "@/type/product";
 import { useRouter } from "next/navigation";
 
-const imageSrc = "http://localhost:5000";
+export const imageSrc = "http://localhost:5000";
 
 interface ProductCardProps {
   product: Product;

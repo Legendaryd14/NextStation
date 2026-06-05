@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
-import { BASE_URL } from "@/app/base";
+import { IMAGE_BASE_URL } from "@/app/base";
 import { cn } from "@/lib/utils";
 import {
   Drawer,
@@ -25,11 +25,14 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
-function getImageUrl(src?: string) {
-  if (!src) return "/placeholder.png";
-  if (src.startsWith("http://") || src.startsWith("https://")) return src;
-  return `${BASE_URL}${src}`;
-}
+// تابع کمکی برای ساخت آدرس صحیح عکس
+const getImageUrl = (imagePath: string) => {
+  if (!imagePath) return "/placeholder.png";
+  // اگر آدرس از قبل کامل است (مثلا با http شروع شده) همان را برگردان، در غیر این صورت باس آدرس را بچسبان
+  return imagePath.startsWith("http")
+    ? imagePath
+    : `${IMAGE_BASE_URL}${imagePath}`;
+};
 
 export function CartDrawer() {
   const router = useRouter();
@@ -187,14 +190,14 @@ export function CartDrawer() {
             type="button"
             onClick={handleCheckout}
             disabled={items.length === 0}
-            className="h-11 rounded-lg bg-amber-300 text-sm font-semibold text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/35"
+            className="w-full h-11 rounded-lg bg-amber-300 text-sm font-semibold text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/35"
           >
             Checkout
           </button>
           <DrawerClose asChild>
             <button
               type="button"
-              className="h-10 rounded-lg border border-white/15 text-sm font-medium text-white transition hover:bg-white/10"
+              className="w-full h-10 rounded-lg border border-white/15 text-sm font-medium text-white transition hover:bg-white/10"
             >
               Continue shopping
             </button>
