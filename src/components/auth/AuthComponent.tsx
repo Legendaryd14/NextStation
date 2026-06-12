@@ -1,11 +1,11 @@
-// components/auth/AuthComponent.tsx
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
-import { LoginFormData, SignupFormData } from "@/type/Auth";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
+import type { LoginFormData, SignupFormData } from "@/type/Auth";
+import { useAuthApi } from "@/hooks/useAuthApi";
 import LoginForm from "./login";
 import SignupForm from "./signup";
 
@@ -20,49 +20,117 @@ export function AuthComponent({
   mode = "customer",
   redirectTo,
 }: AuthProps) {
-  const isLogin = login;
-  const isAdminLogin = mode === "admin";
-
+  const authApi = useAuthApi();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const isLogin = login;
+  const isAdminLogin = mode === "admin";
   const authPath = pathname === "/login" ? "/login" : "/auth";
-  const redirectPath = getSafeRedirectPath(redirectTo);
+
+  const redirectPath = useMemo(() => {
+    const queryRedirect =
+      searchParams.get("redirect") || searchParams.get("callbackUrl");
+
+    return getSafeRedirectPath(redirectTo || queryRedirect || undefined);
+  }, [redirectTo, searchParams]);
+
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
   const [isSubmittingSignup, setIsSubmittingSignup] = useState(false);
+
+  const setUserCookies = (
+    user: any,
+    token?: string | null,
+    refreshToken?: string | null,
+  ) => {
+    const maxAge = 60 * 60 * 24 * 7;
+
+    document.cookie = `role=${encodeURIComponent(
+      user.role,
+    )}; path=/; max-age=${maxAge}; SameSite=Lax`;
+
+    document.cookie = `user=${encodeURIComponent(
+      JSON.stringify(user),
+    )}; path=/; max-age=${maxAge}; SameSite=Lax`;
+
+    if (token) {
+      document.cookie = `token=${encodeURIComponent(
+        token,
+      )}; path=/; max-age=${maxAge}; SameSite=Lax`;
+    }
+
+    if (refreshToken) {
+      document.cookie = `refreshToken=${encodeURIComponent(
+        refreshToken,
+      )}; path=/; max-age=${maxAge}; SameSite=Lax`;
+    }
+  };
+
+  const clearUserCookies = () => {
+    document.cookie = "role=; path=/; max-age=0; SameSite=Lax";
+    document.cookie = "user=; path=/; max-age=0; SameSite=Lax";
+    document.cookie = "token=; path=/; max-age=0; SameSite=Lax";
+    document.cookie = "refreshToken=; path=/; max-age=0; SameSite=Lax";
+  };
 
   const handleLoginSubmit = async (data: LoginFormData) => {
     setLoginError(null);
     setIsSubmittingLogin(true);
 
     try {
-      const response = await fetch(`/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, loginFor: mode }),
+      const result = await authApi.login({
+        email: data.email,
+        password: data.password,
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message ?? "Login failed");
+      if (!result.ok) {
+        const msg =
+          (result.data as any)?.message || "ایمیل یا رمز عبور اشتباه است";
+        throw new Error(msg);
       }
 
-      const role = result.data?.user?.role?.toLowerCase();
-      if (isAdminLogin && role !== "admin") {
-        throw new Error("Only admin accounts can use this login.");
-      }
-      if (!isAdminLogin && role === "admin") {
-        throw new Error("Admin accounts must use the admin login.");
+      const responseData = result.data as any;
+
+      if (!responseData?.success) {
+        throw new Error(responseData?.message || "ورود ناموفق");
       }
 
-      router.push(redirectPath ?? (isAdminLogin ? "/dashboard" : "/"));
+      const user = responseData?.data?.user || responseData?.user;
+
+      if (!user) {
+        throw new Error("اطلاعات کاربر دریافت نشد");
+      }
+
+      if (isAdminLogin && user.role !== "admin") {
+        throw new Error("شما دسترسی ادمین ندارید.");
+      }
+
+      if (!isAdminLogin && user.role === "admin") {
+        throw new Error("پنل ادمین مجزاست. لطفا از بخش مدیریت وارد شوید.");
+      }
+
+      const token =
+        responseData?.data?.token ||
+        responseData?.data?.accessToken ||
+        responseData?.token ||
+        responseData?.accessToken ||
+        null;
+
+      const refreshToken =
+        responseData?.data?.refreshToken || responseData?.refreshToken || null;
+
+      setUserCookies(user, token, refreshToken);
+
+      const targetPath = isAdminLogin ? "/dashboard" : (redirectPath ?? "/");
+
+      router.replace(targetPath);
       router.refresh();
     } catch (error) {
-      setLoginError(
-        error instanceof Error ? error.message : "Something went wrong",
-      );
+      clearUserCookies();
+      setLoginError(error instanceof Error ? error.message : "خطای ناشناخته");
     } finally {
       setIsSubmittingLogin(false);
     }
@@ -73,24 +141,22 @@ export function AuthComponent({
     setIsSubmittingSignup(true);
 
     try {
-      const response = await fetch(`/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email,
-          password: data.password,
-          phone: data.phone,
-        }),
+      const result = await authApi.register({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        phone: data.phone,
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message ?? "Registration failed");
+      if (!result.ok || !result.data) {
+        throw new Error(result.data?.message || "Registration failed.");
       }
 
-      router.push(redirectPath ?? "/");
+      if (!result.data.success) {
+        throw new Error(result.data.message || "Registration failed");
+      }
+
+      router.replace(getAuthHref(authPath, "login", redirectPath));
       router.refresh();
     } catch (error) {
       setSignupError(
@@ -104,7 +170,6 @@ export function AuthComponent({
   return (
     <div className="size-full flex items-center justify-center bg-transparent z-10">
       <div className="w-full max-w-lg px-6">
-        {/* Logo */}
         <Link href="/" className="flex items-center justify-center mb-8">
           <Image
             src="/images/NextStationLogo.png"
@@ -115,7 +180,6 @@ export function AuthComponent({
           />
         </Link>
 
-        {/* Card */}
         <div className="bg-[#1c1c1c67] rounded-xl border border-[#42424282] p-10">
           {isAdminLogin ? (
             <div className="mb-8 text-center">
@@ -132,6 +196,7 @@ export function AuthComponent({
           ) : (
             <div className="flex gap-2 mb-8 bg-zinc-950 rounded-lg p-1">
               <button
+                type="button"
                 onClick={() =>
                   router.push(getAuthHref(authPath, "login", redirectPath))
                 }
@@ -145,6 +210,7 @@ export function AuthComponent({
               </button>
 
               <button
+                type="button"
                 onClick={() =>
                   router.push(getAuthHref(authPath, "signup", redirectPath))
                 }
@@ -159,7 +225,6 @@ export function AuthComponent({
             </div>
           )}
 
-          {/* Form */}
           {isAdminLogin || isLogin ? (
             <LoginForm
               onSubmit={handleLoginSubmit}
@@ -174,59 +239,40 @@ export function AuthComponent({
             />
           )}
 
-          {!isAdminLogin ? (
+          {!isAdminLogin && (
             <>
-              {/* Divider */}
               <div className="flex items-center gap-4 my-6">
-                <div className="flex-1 h-px bg-zinc-800"></div>
+                <div className="flex-1 h-px bg-zinc-800" />
                 <span className="text-sm text-zinc-500">OR</span>
-                <div className="flex-1 h-px bg-zinc-800"></div>
+                <div className="flex-1 h-px bg-zinc-800" />
               </div>
 
-              {/* Social Login */}
               <div className="space-y-3">
-                <button className="w-full bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path
-                      fill="currentColor"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="currentColor"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="currentColor"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    />
-                    <path
-                      fill="currentColor"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    />
-                  </svg>
+                <button
+                  type="button"
+                  className="w-full bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <GoogleIcon />
                   Continue with Google
                 </button>
 
-                <button className="w-full bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                  </svg>
+                <button
+                  type="button"
+                  className="w-full bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <GithubIcon />
                   Continue with GitHub
                 </button>
               </div>
             </>
-          ) : null}
+          )}
         </div>
 
-        {/* Footer Text */}
-        {!isAdminLogin ? (
+        {!isAdminLogin && (
           <p className="text-center text-sm text-zinc-500 mt-6">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
             <button
+              type="button"
               onClick={() =>
                 isLogin
                   ? router.push(getAuthHref(authPath, "signup", redirectPath))
@@ -237,13 +283,13 @@ export function AuthComponent({
               {isLogin ? "Sign up" : "Login"}
             </button>
           </p>
-        ) : null}
+        )}
       </div>
     </div>
   );
 }
 
-function getSafeRedirectPath(redirectTo?: string) {
+function getSafeRedirectPath(redirectTo?: string | null) {
   if (
     !redirectTo ||
     !redirectTo.startsWith("/") ||
@@ -265,9 +311,37 @@ function getAuthHref(
   redirectPath: string | null,
 ) {
   const params = new URLSearchParams({ status });
+
   if (redirectPath) {
     params.set("redirect", redirectPath);
   }
 
   return `${authPath}?${params.toString()}`;
 }
+
+const GoogleIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24">
+    <path
+      fill="currentColor"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="currentColor"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="currentColor"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+    />
+    <path
+      fill="currentColor"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+    />
+  </svg>
+);
+
+const GithubIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+  </svg>
+);

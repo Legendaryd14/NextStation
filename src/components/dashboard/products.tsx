@@ -1,15 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import Image from "next/image";
 import { Trash2 } from "lucide-react";
 import { Pencil } from "@gravity-ui/icons";
 
-import type { Product, ProductResponse } from "@/type/product";
-
-import { BASE_URL } from "@/app/base";
-import { productsApi } from "@/lib/api";
-import { getProducts } from "@/lib/product";
+import type { Product } from "@/type/product";
+import { BASE_URL, IMAGE_BASE_URL } from "@/app/base";
+import { useProductsApi } from "@/hooks/useProductsApi";
 import { cn } from "@/lib/utils";
 
 import {
@@ -34,8 +32,7 @@ import {
 
 const LIMIT = 10;
 
-const emptyProduct: Product = {
-  _id: "new",
+const emptyProduct: Partial<Product> = {
   name: "",
   description: "",
   price: 0,
@@ -43,54 +40,116 @@ const emptyProduct: Product = {
   category: "",
   stock: 0,
   brand: "",
-  rating: 0,
-  numReviews: 0,
   isActive: true,
-  createdAt: "",
-  updatedAt: "",
-  __v: 0,
 };
 
-export default function ProductsPage() {
-  const isAdmin = true;
+export default function AdminProductsPage() {
+  const { list, create, update, remove } = useProductsApi();
+
+  const listRef = useRef(list);
+  const createRef = useRef(create);
+  const updateRef = useRef(update);
+  const removeRef = useRef(remove);
+
+  useEffect(() => {
+    listRef.current = list;
+    createRef.current = create;
+    updateRef.current = update;
+    removeRef.current = remove;
+  }, [list, create, update, remove]);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editedProduct, setEditedProduct] = useState<Product | null>(null);
+  const [editedProduct, setEditedProduct] = useState<Partial<Product> | null>(
+    null,
+  );
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [error, setError] = useState("");
+
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
-  const loadProducts = useCallback(async (pageNumber: number) => {
-    const res = await getProducts({
-      page: String(pageNumber),
-      limit: String(LIMIT),
-    });
+  // filters
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [brand, setBrand] = useState("");
+  const [isActive, setIsActive] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
-    return res as ProductResponse;
-  }, []);
+  const getImageUrl = (image?: string) => {
+    if (!image) return "/placeholder.png";
 
+    if (image.startsWith("http://") || image.startsWith("https://")) {
+      return image;
+    }
+
+    return `${IMAGE_BASE_URL}${image}`;
+  };
+
+  const getListParams = () => ({
+    page,
+    limit: LIMIT,
+    search: search.trim() || undefined,
+    category: category.trim() || undefined,
+    brand: brand.trim() || undefined,
+    isActive: isActive === "" ? undefined : isActive === "true",
+    minPrice: minPrice.trim() ? Number(minPrice) : undefined,
+    maxPrice: maxPrice.trim() ? Number(maxPrice) : undefined,
+  });
+
+  const refetchProducts = async () => {
+    const res = await listRef.current(getListParams());
+
+    if (res.ok && res.data?.success) {
+      setProducts(res.data.data || []);
+      setTotalPages(res.data.pages || 1);
+      return;
+    }
+
+    setProducts([]);
+    setTotalPages(1);
+    setError(res.data?.message || "Unable to load products.");
+  };
+
+  /*
+    چون useProductsApi فعلاً stable نیست، از listRef استفاده شده.
+    بنابراین list داخل dependency این effect نمی‌آید تا infinite loop ایجاد نشود.
+  */
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     let ignore = false;
 
-    async function run() {
+    const run = async () => {
+      setIsLoading(true);
+      setError("");
+
       try {
-        const res = await loadProducts(page);
+        const res = await listRef.current({
+          page,
+          limit: LIMIT,
+          search: search.trim() || undefined,
+          category: category.trim() || undefined,
+          brand: brand.trim() || undefined,
+          isActive: isActive === "" ? undefined : isActive === "true",
+          minPrice: minPrice.trim() ? Number(minPrice) : undefined,
+          maxPrice: maxPrice.trim() ? Number(maxPrice) : undefined,
+        });
 
         if (ignore) return;
 
-        const nextProducts = res.data ?? [];
-        const apiTotalPages =
-          typeof res.pages === "number" && res.pages > 0
-            ? res.pages
-            : Math.ceil((res.total ?? 0) / LIMIT);
-
-        setProducts(nextProducts);
-        setTotalPages(Math.max(1, apiTotalPages));
-        setError("");
+        if (res.ok && res.data?.success) {
+          setProducts(res.data.data || []);
+          setTotalPages(res.data.pages || 1);
+        } else {
+          setProducts([]);
+          setTotalPages(1);
+          setError(res.data?.message || "Unable to load products.");
+        }
       } catch (err) {
         if (ignore) return;
 
@@ -103,69 +162,50 @@ export default function ProductsPage() {
           setIsLoading(false);
         }
       }
-    }
+    };
 
     void run();
 
     return () => {
       ignore = true;
     };
-  }, [page, loadProducts]);
+  }, [page, search, category, brand, isActive, minPrice, maxPrice]);
 
-  const refreshCurrentPage = async () => {
-    try {
-      setIsLoading(true);
-
-      const res = await loadProducts(page);
-
-      const nextProducts = res.data ?? [];
-      const apiTotalPages =
-        typeof res.pages === "number" && res.pages > 0
-          ? res.pages
-          : Math.ceil((res.total ?? 0) / LIMIT);
-
-      setProducts(nextProducts);
-      setTotalPages(Math.max(1, apiTotalPages));
-      setError("");
-    } catch (err) {
-      console.error("Refresh products error:", err);
-      setError("Unable to refresh products.");
-    } finally {
-      setIsLoading(false);
-    }
+  const resetToFirstPage = () => {
+    setPage(1);
   };
 
-  const goToPrevPage = () => {
-    if (page <= 1 || isLoading) return;
-
-    setIsLoading(true);
-    setPage((prev) => Math.max(1, prev - 1));
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    resetToFirstPage();
   };
 
-  const goToNextPage = () => {
-    if (page >= totalPages || isLoading) return;
-
-    setIsLoading(true);
-    setPage((prev) => Math.min(totalPages, prev + 1));
+  const handleCategoryChange = (value: string) => {
+    setCategory(value);
+    resetToFirstPage();
   };
 
-  const getImageUrl = (image?: string) => {
-    if (!image) return "/placeholder.png";
+  const handleBrandChange = (value: string) => {
+    setBrand(value);
+    resetToFirstPage();
+  };
 
-    if (image.startsWith("http://") || image.startsWith("https://")) {
-      return image;
-    }
+  const handleIsActiveChange = (value: string) => {
+    setIsActive(value);
+    resetToFirstPage();
+  };
 
-    if (image.startsWith("/")) {
-      return `${BASE_URL}${image}`;
-    }
+  const handleMinPriceChange = (value: string) => {
+    setMinPrice(value);
+    resetToFirstPage();
+  };
 
-    return `${BASE_URL}/${image}`;
+  const handleMaxPriceChange = (value: string) => {
+    setMaxPrice(value);
+    resetToFirstPage();
   };
 
   const startAddProduct = () => {
-    if (!isAdmin) return;
-
     setEditingId("new");
     setEditedProduct({ ...emptyProduct });
     setSelectedImages([]);
@@ -174,8 +214,6 @@ export default function ProductsPage() {
   };
 
   const startEdit = (product: Product) => {
-    if (!isAdmin) return;
-
     setEditingId(product._id);
     setEditedProduct({ ...product });
     setSelectedImages([]);
@@ -188,24 +226,19 @@ export default function ProductsPage() {
     setEditedProduct(null);
     setSelectedImages([]);
     setIsNewProduct(false);
+    setSelectedImages([]);
+    setError("");
   };
 
-  const updateField = (
-    field: keyof Product,
-    value: string | number | boolean,
+  const updateField = <K extends keyof Product>(
+    field: K,
+    value: Product[K],
   ) => {
-    setEditedProduct((prev) => {
-      if (!prev) return prev;
-
-      return {
-        ...prev,
-        [field]: value,
-      };
-    });
+    setEditedProduct((prev) => (prev ? { ...prev, [field]: value } : null));
   };
 
   const deleteProduct = async (id: string) => {
-    if (!isAdmin) return;
+    if (isDeletingId) return;
 
     const confirmed = window.confirm(
       "Are you sure you want to delete this product?",
@@ -214,53 +247,116 @@ export default function ProductsPage() {
     if (!confirmed) return;
 
     try {
-      await productsApi.delete(id);
-
-      setProducts((prev) => prev.filter((product) => product._id !== id));
       setError("");
+      setIsDeletingId(id);
 
-      void refreshCurrentPage();
+      const res = await removeRef.current(id);
+
+      if (!res.ok || !res.data?.success) {
+        setError(res.data?.message || "Failed to delete product.");
+        return;
+      }
+
+      await refetchProducts();
     } catch (err) {
       console.error("Delete product error:", err);
-      setError("Failed to delete product. Admin access required.");
+      setError("Failed to delete product.");
+    } finally {
+      setIsDeletingId(null);
     }
   };
+  const [selectedImagePreviews, setSelectedImagePreviews] = useState<string[]>(
+    [],
+  );
 
+  useEffect(() => {
+    const previews = selectedImages.map((file) => URL.createObjectURL(file));
+
+    const selectedImagePreviews = selectedImages.map((file) =>
+      URL.createObjectURL(file),
+    );
+
+    return () => {
+      previews.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [selectedImages]);
   const saveEdit = async () => {
-    if (!editedProduct || !isAdmin) return;
+    if (!editedProduct || isSaving) return;
+
+    const name = editedProduct.name?.trim() || "";
+    const categoryValue = editedProduct.category?.trim() || "";
+    const priceValue = Number(editedProduct.price);
+    const stockValue = Number(editedProduct.stock);
+
+    if (!name) {
+      setError("Product name is required.");
+      return;
+    }
+
+    if (!categoryValue) {
+      setError("Category is required.");
+      return;
+    }
+
+    if (Number.isNaN(priceValue) || priceValue < 0) {
+      setError("Price must be 0 or greater.");
+      return;
+    }
+
+    if (Number.isNaN(stockValue) || stockValue < 0) {
+      setError("Stock must be 0 or greater.");
+      return;
+    }
+
+    if (isNewProduct && selectedImages.length === 0) {
+      setError("Image is required for new products.");
+      return;
+    }
 
     try {
+      setIsSaving(true);
+      setError("");
+
       const payload = new FormData();
 
-      payload.append("name", editedProduct.name ?? "");
-      payload.append("description", editedProduct.description ?? "");
-      payload.append("price", String(editedProduct.price ?? 0));
-      payload.append("category", editedProduct.category ?? "");
-      payload.append("brand", editedProduct.brand ?? "");
-      payload.append("stock", String(editedProduct.stock ?? 0));
-      payload.append("isActive", String(editedProduct.isActive));
+      Object.entries(editedProduct).forEach(([key, value]) => {
+        if (key === "_id" || key === "images") return;
+        if (value === undefined || value === null) return;
+
+        if (typeof value === "boolean") {
+          payload.append(key, value ? "true" : "false");
+        } else {
+          payload.append(key, String(value));
+        }
+      });
 
       selectedImages.forEach((file) => {
         payload.append("images", file);
       });
 
       if (isNewProduct) {
-        if (!selectedImages.length) {
-          setError("Please upload at least one product image.");
+        const res = await createRef.current(payload);
+
+        if (!res.ok || !res.data?.success) {
+          setError(res.data?.message || "Failed to create product.");
           return;
         }
+      } else if (editingId) {
+        const res = await updateRef.current(editingId, payload);
 
-        await productsApi.create(payload);
-      } else {
-        await productsApi.update(editedProduct._id, payload);
+        if (!res.ok || !res.data?.success) {
+          setError(res.data?.message || "Failed to update product.");
+          return;
+        }
       }
 
       cancelEdit();
-      setError("");
-      await refreshCurrentPage();
+      await refetchProducts();
     } catch (err) {
       console.error("Save product error:", err);
-      setError("Failed to save product. Admin access required.");
+      setError("Failed to save product.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -270,41 +366,80 @@ export default function ProductsPage() {
         <div className="mb-6 flex items-center justify-between">
           <h2 className={dashboardTitleClass()}>Product Management</h2>
 
-          {isAdmin && (
-            <ModalTrigger onClick={startAddProduct}>
-              <span
-                className={cn(
-                  dashboardButtonClass(),
-                  "inline-flex cursor-pointer items-center justify-center border-green-600 bg-green-600 text-white hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-500",
-                )}
-              >
-                + Add Product
-              </span>
-            </ModalTrigger>
-          )}
+          <ModalTrigger onClick={startAddProduct}>
+            <span
+              className={cn(
+                dashboardButtonClass(),
+                "cursor-pointer bg-green-600 text-white hover:bg-green-700",
+              )}
+            >
+              + Add Product
+            </span>
+          </ModalTrigger>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-200">
+          <div className="mb-4 rounded-lg border border-red-400 bg-red-500/10 p-3 text-red-500">
             {error}
           </div>
         )}
 
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <Input
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
+
+          <Input
+            placeholder="Category"
+            value={category}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+          />
+
+          <Input
+            placeholder="Brand"
+            value={brand}
+            onChange={(e) => handleBrandChange(e.target.value)}
+          />
+
+          <Input
+            type="number"
+            placeholder="Min Price"
+            value={minPrice}
+            onChange={(e) => handleMinPriceChange(e.target.value)}
+          />
+
+          <Input
+            type="number"
+            placeholder="Max Price"
+            value={maxPrice}
+            onChange={(e) => handleMaxPriceChange(e.target.value)}
+          />
+
+          <select
+            className="rounded-md border border-white/10 bg-black px-3 text-white"
+            value={isActive}
+            onChange={(e) => handleIsActiveChange(e.target.value)}
+          >
+            <option value="">Status (All)</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+        </div>
+
         <div className={dashboardPanelClass()}>
           <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[1100px]">
+            <table className="w-full min-w-[1000px]">
               <thead>
                 <tr className={dashboardTableHeadClass()}>
                   <th className="px-6 py-4 text-left">Img</th>
-                  <th className="px-6 py-4 text-left">ID</th>
                   <th className="px-6 py-4 text-left">Name</th>
                   <th className="px-6 py-4 text-left">Category</th>
                   <th className="px-6 py-4 text-left">Brand</th>
                   <th className="px-6 py-4 text-left">Price</th>
                   <th className="px-6 py-4 text-left">Stock</th>
-                  <th className="px-6 py-4 text-left">Rating</th>
-                  <th className="px-6 py-4 text-left">Reviews</th>
-                  <th className="px-6 py-4 text-left">Active</th>
+                  <th className="px-6 py-4 text-left">Status</th>
                   <th className="px-6 py-4 text-left">Actions</th>
                 </tr>
               </thead>
@@ -312,112 +447,108 @@ export default function ProductsPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={11} className="px-6 py-8 text-center">
-                      Loading products...
+                    <td colSpan={8} className="py-10 text-center text-white">
+                      Loading...
                     </td>
                   </tr>
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-6 py-8 text-center">
+                    <td colSpan={8} className="py-10 text-center text-white/70">
                       No products found.
                     </td>
                   </tr>
                 ) : (
-                  products.map((product) => {
-                    const imageUrl = getImageUrl(product.images?.[0]);
+                  products.map((product) => (
+                    <tr key={product._id} className={dashboardTableRowClass()}>
+                      <td className="px-6 py-4">
+                        <Image
+                          src={getImageUrl(product.images?.[0])}
+                          alt={product.name || "product"}
+                          width={40}
+                          height={40}
+                          className="h-10 w-10 rounded object-cover"
+                          unoptimized
+                        />
+                      </td>
 
-                    return (
-                      <tr
-                        key={product._id}
-                        className={dashboardTableRowClass()}
+                      <td
+                        className={cn(
+                          "px-6 py-4",
+                          "text-black dark:text-white",
+                        )}
                       >
-                        <td className="px-6 py-4">
-                          <Image
-                            src={imageUrl}
-                            alt={product.name || "Product image"}
-                            width={40}
-                            height={40}
-                            className="h-10 w-10 rounded object-cover"
-                            unoptimized
-                          />
-                        </td>
+                        {product.name}
+                      </td>
 
-                        <td className="max-w-[130px] truncate px-6 py-4">
-                          {product._id}
-                        </td>
+                      <td className="px-6 py-4">{product.category}</td>
 
-                        <td className="max-w-[180px] truncate px-6 py-4">
-                          {product.name}
-                        </td>
+                      <td className="px-6 py-4">{product.brand}</td>
 
-                        <td className="px-6 py-4">{product.category}</td>
-                        <td className="px-6 py-4">{product.brand}</td>
-                        <td className="px-6 py-4">${product.price}</td>
-                        <td className="px-6 py-4">{product.stock}</td>
-                        <td className="px-6 py-4">{product.rating}</td>
-                        <td className="px-6 py-4">{product.numReviews}</td>
+                      <td className="px-6 py-4 text-green-400">
+                        ${product.price}
+                      </td>
 
-                        <td className="px-6 py-4">
-                          <span
-                            className={cn(
-                              "rounded px-2 py-1 text-xs",
-                              product.isActive
-                                ? "bg-green-100 text-green-800 dark:bg-green-400/10 dark:text-green-300"
-                                : "bg-red-100 text-red-800 dark:bg-red-400/10 dark:text-red-300",
-                            )}
+                      <td className="px-6 py-4">{product.stock}</td>
+
+                      <td className="px-6 py-4">
+                        <span
+                          className={cn(
+                            "rounded px-2 py-1 text-xs",
+                            product.isActive
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-red-500/20 text-red-400",
+                          )}
+                        >
+                          {product.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex gap-3">
+                          <ModalTrigger onClick={() => startEdit(product)}>
+                            <Pencil className="cursor-pointer text-blue-500 hover:text-blue-400" />
+                          </ModalTrigger>
+
+                          <button
+                            type="button"
+                            disabled={isDeletingId === product._id}
+                            onClick={() => deleteProduct(product._id)}
+                            className="disabled:cursor-not-allowed disabled:opacity-50"
+                            aria-label="Delete product"
                           >
-                            {product.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            {isAdmin && (
-                              <ModalTrigger onClick={() => startEdit(product)}>
-                                <span className="inline-flex cursor-pointer items-center justify-center text-blue-500 transition-colors hover:text-blue-600 dark:hover:text-blue-400">
-                                  <Pencil />
-                                </span>
-                              </ModalTrigger>
-                            )}
-
-                            {isAdmin && (
-                              <button
-                                type="button"
-                                onClick={() => deleteProduct(product._id)}
-                                className="text-red-500 transition-colors hover:text-red-600 dark:hover:text-red-400"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
+                            <Trash2
+                              className="text-red-500 hover:text-red-400"
+                              size={18}
+                            />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-center gap-4">
+        <div className="mt-6 flex items-center justify-center gap-4 text-white">
           <button
             type="button"
-            disabled={page <= 1 || isLoading}
-            onClick={goToPrevPage}
+            disabled={page === 1 || isLoading}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
             className={dashboardButtonClass()}
           >
             Prev
           </button>
 
-          <span className="text-sm">
-            Page {page} / {totalPages}
+          <span>
+            Page {page} of {totalPages}
           </span>
 
           <button
             type="button"
             disabled={page >= totalPages || isLoading}
-            onClick={goToNextPage}
+            onClick={() => setPage((p) => p + 1)}
             className={dashboardButtonClass()}
           >
             Next
@@ -426,141 +557,184 @@ export default function ProductsPage() {
 
         {editingId && editedProduct && (
           <ModalBody>
-            <ModalContent className="max-h-[80vh] space-y-4 overflow-y-auto p-6">
-              <h2 className="mb-4 text-xl font-semibold">
+            <ModalContent
+              className={cn(
+                "max-h-[85vh]",
+                "overflow-y-auto",
+                "rounded-xl",
+                "border border-white/10",
+                "bg-[#020308]",
+                "p-6",
+                "text-white",
+                "shadow-none",
+              )}
+            >
+              <h2 className="mb-6 text-xl font-bold text-white">
                 {isNewProduct ? "Add New Product" : "Edit Product"}
               </h2>
 
-              {!isNewProduct && editedProduct.images?.length > 0 && (
-                <div className="flex flex-wrap gap-3">
-                  {editedProduct.images.map((img, index) => (
-                    <Image
-                      key={`${img}-${index}`}
-                      src={getImageUrl(img)}
-                      width={70}
-                      height={70}
-                      alt="Product image"
-                      className="h-[70px] w-[70px] rounded border border-slate-200 object-cover dark:border-white/10"
-                      unoptimized
-                    />
-                  ))}
-                </div>
-              )}
+              {!isNewProduct && editedProduct.images?.length ? (
+                <div className="mb-6 rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+                  <Label className="text-slate-200">Current Images</Label>
 
-              {!isNewProduct && (
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    {editedProduct.images.map((image) => (
+                      <Image
+                        key={image}
+                        src={getImageUrl(image)}
+                        alt="product image"
+                        width={72}
+                        height={72}
+                        className="h-18 w-18 rounded-lg border border-slate-700 object-cover"
+                        unoptimized
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <Label className="text-slate-200">Name</Label>
+                  <Input
+                    value={editedProduct.name ?? ""}
+                    onChange={(e) => updateField("name", e.target.value)}
+                    className="mt-1 border-slate-700 bg-slate-900 text-white placeholder:text-slate-500"
+                  />
+                </div>
+
                 <div>
-                  <Label>ID</Label>
-                  <Input value={editedProduct._id} disabled />
+                  <Label className="text-slate-200">Price</Label>
+                  <Input
+                    type="number"
+                    value={editedProduct.price ?? 0}
+                    onChange={(e) =>
+                      updateField("price", Number(e.target.value))
+                    }
+                    className="mt-1 border-slate-700 bg-slate-900 text-white"
+                  />
                 </div>
-              )}
 
-              <div>
-                <Label>Name</Label>
-                <Input
-                  value={editedProduct.name}
-                  onChange={(e) => updateField("name", e.target.value)}
-                />
+                <div>
+                  <Label className="text-slate-200">Stock</Label>
+                  <Input
+                    type="number"
+                    value={editedProduct.stock ?? 0}
+                    onChange={(e) =>
+                      updateField("stock", Number(e.target.value))
+                    }
+                    className="mt-1 border-slate-700 bg-slate-900 text-white"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-slate-200">Category</Label>
+                  <Input
+                    value={editedProduct.category ?? ""}
+                    onChange={(e) => updateField("category", e.target.value)}
+                    className="mt-1 border-slate-700 bg-slate-900 text-white"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-slate-200">Brand</Label>
+                  <Input
+                    value={editedProduct.brand ?? ""}
+                    onChange={(e) => updateField("brand", e.target.value)}
+                    className="mt-1 border-slate-700 bg-slate-900 text-white"
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label>Price</Label>
-                <Input
-                  type="number"
-                  value={editedProduct.price}
-                  onChange={(e) => updateField("price", Number(e.target.value))}
-                />
-              </div>
-
-              <div>
-                <Label>Stock</Label>
-                <Input
-                  type="number"
-                  value={editedProduct.stock}
-                  onChange={(e) => updateField("stock", Number(e.target.value))}
-                />
-              </div>
-
-              <div>
-                <Label>Brand</Label>
-                <Input
-                  value={editedProduct.brand}
-                  onChange={(e) => updateField("brand", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label>Category</Label>
-                <Input
-                  value={editedProduct.category}
-                  onChange={(e) => updateField("category", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label>Description</Label>
+              <div className="mt-4">
+                <Label className="text-slate-200">Description</Label>
                 <textarea
-                  className={cn(
-                    "w-full rounded border border-slate-300 bg-white p-2 text-slate-950",
-                    "dark:border-white/10 dark:bg-[#05070d] dark:text-white",
-                  )}
-                  rows={4}
-                  value={editedProduct.description}
+                  className="mt-1 min-h-[110px] w-full rounded-md border border-slate-700 bg-slate-900 p-3 text-white outline-none transition focus:border-blue-500"
+                  value={editedProduct.description ?? ""}
                   onChange={(e) => updateField("description", e.target.value)}
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <Label>Active</Label>
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
                 <input
                   type="checkbox"
-                  checked={editedProduct.isActive}
-                  className="accent-[#fe1929]"
+                  checked={editedProduct.isActive ?? false}
                   onChange={(e) => updateField("isActive", e.target.checked)}
+                  className="h-4 w-4 accent-blue-600"
                 />
+                <Label className="text-slate-200">Is Active</Label>
               </div>
 
-              <div>
-                <Label>Product Images</Label>
+              <div className="mt-5 rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+                <Label className="text-slate-200">Upload Images</Label>
 
-                <div>{}</div>
+                <div className="mt-3">
+                  <FileUpload
+                    onChange={(files) => setSelectedImages(files as File[])}
+                  />
+                </div>
 
-                <FileUpload
-                  onChange={(files) => {
-                    setSelectedImages(files as File[]);
-                  }}
-                />
+                {selectedImagePreviews.length > 0 && (
+                  <div className="mt-5">
+                    <p className="mb-3 text-sm font-medium text-slate-300">
+                      Selected Images Preview
+                    </p>
 
-                {selectedImages.length > 0 ? (
-                  <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    Selected {selectedImages.length} file(s):{" "}
-                    {selectedImages.map((file) => file.name).join(", ")}
-                  </div>
-                ) : (
-                  <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    {isNewProduct
-                      ? "Upload one or more images to create a product."
-                      : "Upload images only if you want to replace/add product images."}
+                    <div className="flex flex-wrap gap-3">
+                      {selectedImagePreviews.map((src, index) => (
+                        <div
+                          key={src}
+                          className="relative rounded-lg border border-slate-700 bg-slate-950 p-2"
+                        >
+                          <Image
+                            src={src}
+                            alt={`selected image ${index + 1}`}
+                            width={88}
+                            height={88}
+                            className="h-22 w-22 rounded-md object-cover"
+                            unoptimized
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedImages((prev) =>
+                                prev.filter(
+                                  (_, fileIndex) => fileIndex !== index,
+                                ),
+                              )
+                            }
+                            className="absolute -right-2 -top-2 rounded-full bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
+                            aria-label="Remove selected image"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="mt-6 flex justify-end gap-2 border-t border-slate-700 pt-4">
                 <button
                   type="button"
                   onClick={saveEdit}
-                  className={dashboardButtonClass(
-                    isNewProduct
-                      ? "border-green-600 bg-green-600 text-white hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-500"
-                      : "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 dark:border-blue-500 dark:bg-blue-600 dark:hover:bg-blue-500",
-                  )}
+                  disabled={isSaving}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isNewProduct ? "Create Product" : "Save Changes"}
+                  {isSaving
+                    ? "Saving..."
+                    : isNewProduct
+                      ? "Create"
+                      : "Save Changes"}
                 </button>
 
                 <button
                   type="button"
                   onClick={cancelEdit}
-                  className={dashboardButtonClass()}
+                  disabled={isSaving}
+                  className="rounded-md bg-slate-700 px-4 py-2 text-white transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>

@@ -6,8 +6,9 @@ import {
   Root as PopoverRoot,
   Trigger as PopoverTrigger,
 } from "@radix-ui/react-popover";
-import { Eye, Package, User } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { LayoutDashboard, LogOut, Package, User } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import { useState } from "react";
 
 export interface UserData {
@@ -16,307 +17,122 @@ export interface UserData {
   name: string;
 }
 
-export interface Order {
-  date: string;
-  id: string;
-  progress: number;
-  status: "processing" | "shipped" | "delivered";
+export interface AccountMenuItem {
+  href?: string;
+  label: string;
+  onClick?: () => void | Promise<void>;
+  type?: "dashboard" | "logout" | "orders" | "profile";
 }
 
 export interface UserAccountAvatarProps {
   className?: string;
-  onOrderView?: (orderId: string) => void;
-  onProfileSave?: (user: UserData) => void;
-  orders?: Order[];
+  menuItems?: AccountMenuItem[];
   user: UserData;
 }
 
-const mockOrders: Order[] = [
-  { id: "ORD001", date: "2023-03-15", status: "delivered", progress: 100 },
-  { id: "ORD002", date: "2023-03-20", status: "shipped", progress: 66 },
-];
+const menuIcon = {
+  dashboard: LayoutDashboard,
+  logout: LogOut,
+  orders: Package,
+  profile: User,
+};
 
 export default function UserAccountAvatar({
   user,
-  orders = mockOrders,
-  onProfileSave,
-  onOrderView,
+  menuItems = [],
   className = "",
 }: UserAccountAvatarProps) {
-  const [activeSection, setActiveSection] = useState<string | null>(null);
-  const [userData, setUserData] = useState<UserData>(user);
+  const [open, setOpen] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+  const fallbackItems: AccountMenuItem[] = [
+    { label: "Profile", type: "profile" },
+    { label: "Orders", type: "orders" },
+    { label: "Logout", type: "logout" },
+  ];
+  const accountItems = menuItems.length > 0 ? menuItems : fallbackItems;
 
-  const handleSectionClick = (section: string) => {
-    setActiveSection(activeSection === section ? null : section);
-  };
+  const renderItem = (item: AccountMenuItem) => {
+    const Icon = menuIcon[item.type ?? "profile"];
+    const className = `flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-left font-medium text-sm transition-colors hover:bg-muted ${
+      item.type === "logout" ? "text-destructive" : "text-foreground"
+    }`;
+    const content = (
+      <>
+        <Icon className="shrink-0" size={16} />
+        {item.label}
+      </>
+    );
 
-  const handleProfileSave = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const updatedUser = {
-      ...userData,
-      name: formData.get("name") as string,
-      email: formData.get("email") as string,
-    };
-    setUserData(updatedUser);
-    if (onProfileSave) {
-      onProfileSave(updatedUser);
+    if (item.href) {
+      return (
+        <Link
+          className={className}
+          href={item.href}
+          key={`${item.label}-${item.href}`}
+          onClick={() => setOpen(false)}
+        >
+          {content}
+        </Link>
+      );
     }
-    setActiveSection(null);
-  };
 
-  const renderEditProfile = () => (
-    <form className="flex flex-col gap-3 p-4" onSubmit={handleProfileSave}>
-      <div className="flex flex-col gap-1.5">
-        <label
-          className="font-medium text-muted-foreground text-xs"
-          htmlFor="name"
-        >
-          Name
-        </label>
-        <input
-          className="rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-          defaultValue={userData.name}
-          id="name"
-          name="name"
-          placeholder="Enter your name"
-          type="text"
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label
-          className="font-medium text-muted-foreground text-xs"
-          htmlFor="email"
-        >
-          Email
-        </label>
-        <input
-          className="rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-          defaultValue={userData.email}
-          id="email"
-          name="email"
-          placeholder="Enter your email"
-          type="email"
-        />
-      </div>
-
+    return (
       <button
-        className="mt-2 cursor-pointer rounded-md bg-brand px-4 py-2.5 font-semibold text-sm text-white shadow-sm transition-all hover:bg-brand/90 hover:shadow-md active:scale-[0.98] active:bg-brand"
-        type="submit"
+        className={className}
+        key={item.label}
+        onClick={() => {
+          setOpen(false);
+          void item.onClick?.();
+        }}
+        type="button"
       >
-        Save Changes
+        {content}
       </button>
-    </form>
-  );
-
-  const getStatusColor = (status: Order["status"]) => {
-    if (status === "processing") {
-      return "bg-blue-500";
-    }
-    if (status === "shipped") {
-      return "bg-amber-500";
-    }
-    return "bg-emerald-500";
+    );
   };
-
-  const renderLastOrders = () => (
-    <div className="flex flex-col gap-3 p-4">
-      {orders.map((order) => (
-        <div
-          className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3 transition-colors hover:bg-muted/50"
-          key={order.id}
-        >
-          <div className="flex items-center justify-between">
-            <div className="font-semibold text-sm">{order.id}</div>
-            <div className="text-muted-foreground text-xs">{order.date}</div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-medium text-foreground capitalize">
-                  {order.status}
-                </span>
-                <span className="text-muted-foreground">{order.progress}%</span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                <motion.div
-                  animate={
-                    shouldReduceMotion ? {} : { width: `${order.progress}%` }
-                  }
-                  className={`h-full rounded-full ${getStatusColor(order.status)}`}
-                  initial={shouldReduceMotion ? {} : { width: 0 }}
-                  transition={
-                    shouldReduceMotion
-                      ? { duration: 0 }
-                      : {
-                          type: "spring" as const,
-                          stiffness: 300,
-                          damping: 30,
-                          duration: 0.4,
-                        }
-                  }
-                />
-              </div>
-            </div>
-            <button
-              aria-label="View Order"
-              className="flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-background p-2 transition-colors hover:border-primary hover:bg-muted"
-              onClick={() => {
-                onOrderView?.(order.id);
-              }}
-              type="button"
-            >
-              <Eye className="text-muted-foreground" size={16} />
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 
   return (
-    <PopoverRoot>
+    <PopoverRoot onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
         <button
+          aria-label="Open account menu"
           className={`flex cursor-pointer items-center gap-2 rounded-full border bg-background ${className}`}
           type="button"
         >
           <img
-            alt="User Avatar"
-            className="rounded-full"
+            alt={`${user.name || user.email} avatar`}
+            className="rounded-full object-cover"
             height={48}
-            src={userData.avatar}
+            src={user.avatar}
             width={48}
           />
         </button>
       </PopoverTrigger>
       <PopoverPortal>
         <PopoverContent
+          align="end"
           className="z-50 w-64 overflow-hidden rounded-xl border bg-background shadow-xl"
-          onOpenAutoFocus={(e) => e.preventDefault()}
+          onOpenAutoFocus={(event) => event.preventDefault()}
           sideOffset={8}
-          style={{ pointerEvents: "auto" }}
         >
           <motion.div
-            animate={shouldReduceMotion ? {} : { height: "auto" }}
-            initial={shouldReduceMotion ? {} : { height: "auto" }}
-            style={{ pointerEvents: "auto" }}
+            animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+            initial={shouldReduceMotion ? {} : { opacity: 0, y: -6 }}
             transition={
               shouldReduceMotion
                 ? { duration: 0 }
                 : { type: "spring" as const, duration: 0.25, bounce: 0 }
             }
           >
-            <div
-              className="flex flex-col divide-y divide-border"
-              style={{ pointerEvents: "auto" }}
-            >
-              <button
-                className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 font-medium text-sm transition-colors ${
-                  activeSection === "profile"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted"
-                }`}
-                onClick={() => {
-                  handleSectionClick("profile");
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleSectionClick("profile");
-                  }
-                }}
-                type="button"
-              >
-                <User className="shrink-0" size={16} />
-                Edit Profile
-              </button>
-              <AnimatePresence initial={false}>
-                {activeSection === "profile" && (
-                  <motion.div
-                    animate={
-                      shouldReduceMotion
-                        ? { opacity: 1, height: "auto" }
-                        : {
-                            opacity: 1,
-                            height: "auto",
-                            filter: "blur(0px)",
-                          }
-                    }
-                    exit={
-                      shouldReduceMotion
-                        ? { opacity: 0, height: 0, transition: { duration: 0 } }
-                        : { opacity: 0, height: 0, filter: "blur(10px)" }
-                    }
-                    initial={
-                      shouldReduceMotion
-                        ? { opacity: 0, height: 0 }
-                        : { opacity: 0, height: 0, filter: "blur(10px)" }
-                    }
-                    transition={
-                      shouldReduceMotion
-                        ? { duration: 0 }
-                        : { type: "spring" as const, duration: 0.25, bounce: 0 }
-                    }
-                  >
-                    {renderEditProfile()}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <button
-                className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 font-medium text-sm transition-colors ${
-                  activeSection === "orders"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted"
-                }`}
-                onClick={() => {
-                  handleSectionClick("orders");
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleSectionClick("orders");
-                  }
-                }}
-                type="button"
-              >
-                <Package className="shrink-0" size={16} />
-                Last Orders
-              </button>
-              <AnimatePresence initial={false}>
-                {activeSection === "orders" && (
-                  <motion.div
-                    animate={
-                      shouldReduceMotion
-                        ? { opacity: 1, height: "auto" }
-                        : {
-                            opacity: 1,
-                            height: "auto",
-                            filter: "blur(0px)",
-                          }
-                    }
-                    exit={
-                      shouldReduceMotion
-                        ? { opacity: 0, height: 0, transition: { duration: 0 } }
-                        : { opacity: 0, height: 0, filter: "blur(10px)" }
-                    }
-                    initial={
-                      shouldReduceMotion
-                        ? { opacity: 0, height: 0 }
-                        : { opacity: 0, height: 0, filter: "blur(10px)" }
-                    }
-                    transition={
-                      shouldReduceMotion
-                        ? { duration: 0 }
-                        : { type: "spring" as const, duration: 0.25, bounce: 0 }
-                    }
-                  >
-                    {renderLastOrders()}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="border-b border-border px-4 py-3">
+              <p className="truncate font-semibold text-foreground text-sm">
+                {user.name || "Account"}
+              </p>
+              <p className="truncate text-muted-foreground text-xs">
+                {user.email}
+              </p>
             </div>
+            <div className="flex flex-col p-1">{accountItems.map(renderItem)}</div>
           </motion.div>
         </PopoverContent>
       </PopoverPortal>

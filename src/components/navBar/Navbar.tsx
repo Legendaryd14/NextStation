@@ -1,4 +1,5 @@
 "use client";
+
 import {
   Navbar,
   NavBody,
@@ -11,13 +12,15 @@ import {
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
 import { Car, Compass, Crosshair, Gamepad2, Swords } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import React from "react";
-import { AnimatedThemeToggler } from "../ui/animated-theme-toggler";
-
-import { GooeyInput } from "../ui/gooey-input";
+import { useAuth } from "@/components/auth/context/AuthProvider.tsx";
 import { CartTrigger } from "../cart/CartTrigger";
+import { GooeyInput } from "../ui/gooey-input";
+import UserAccountAvatar, {
+  type AccountMenuItem,
+} from "../ui/smoothui/user-account-avatar";
 
 const categories = [
   {
@@ -69,8 +72,52 @@ const navItems = [
   { name: "Blog", link: "/blog" },
 ];
 
+const getAvatarUrl = (name: string, email: string) => {
+  const seed = encodeURIComponent(email || name || "nextstation-user");
+
+  return `https://avatar.vercel.sh/${seed}`;
+};
+
 export function NavbarComponent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, loading, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/auth?status=login");
+  };
+
+  const accountMenuItems: AccountMenuItem[] = user?.role === "admin"
+    ? [
+        { href: "/dashboard", label: "Dashboard", type: "dashboard" },
+        { href: "/dashboard/profile", label: "Profile", type: "profile" },
+        { label: "Logout", onClick: handleLogout, type: "logout" },
+      ]
+    : [
+        { href: "/profile", label: "Profile", type: "profile" },
+        { href: "/orders", label: "Orders", type: "orders" },
+        { label: "Logout", onClick: handleLogout, type: "logout" },
+      ];
+
+  const authAction = user && isAuthenticated ? (
+    <UserAccountAvatar
+      className="size-11 border-white/20 p-0.5"
+      menuItems={accountMenuItems}
+      user={{
+        avatar: getAvatarUrl(user.name, user.email),
+        email: user.email,
+        name: user.name,
+      }}
+    />
+  ) : loading ? (
+    <div className="size-11 animate-pulse rounded-full bg-white/15" />
+  ) : (
+    <NavbarButton variant="primary" href="/auth?status=login">
+      Login
+    </NavbarButton>
+  );
+
   return (
     <div className="relative w-full">
       <Navbar>
@@ -79,9 +126,7 @@ export function NavbarComponent() {
           <NavbarLogo />
           <NavItems items={navItems} />
           <div className="flex items-center gap-4">
-            <NavbarButton variant="primary" href="/auth?status=login">
-              Login
-            </NavbarButton>
+            <div className="transition-opacity duration-300">{authAction}</div>
             <CartTrigger />
             <NavbarButton variant="secondary">
               <GooeyInput placeholder="Search..." />
@@ -144,14 +189,30 @@ export function NavbarComponent() {
             ))}
             <div className="flex w-full flex-col gap-4">
               <CartTrigger className="w-full justify-center border border-white/10 py-3" />
-              <NavbarButton
-                onClick={() => setIsMobileMenuOpen(false)}
-                variant="primary"
-                className="w-full"
-                href="/auth?status=login"
-              >
-                Login
-              </NavbarButton>
+              {user && isAuthenticated ? (
+                <div className="flex justify-center">
+                  <UserAccountAvatar
+                    className="size-12 border-white/20 p-0.5"
+                    menuItems={accountMenuItems}
+                    user={{
+                      avatar: getAvatarUrl(user.name, user.email),
+                      email: user.email,
+                      name: user.name,
+                    }}
+                  />
+                </div>
+              ) : loading ? (
+                <div className="mx-auto size-12 animate-pulse rounded-full bg-white/15" />
+              ) : (
+                <NavbarButton
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  variant="primary"
+                  className="w-full"
+                  href="/auth?status=login"
+                >
+                  Login
+                </NavbarButton>
+              )}
               <NavbarButton
                 onClick={() => setIsMobileMenuOpen(false)}
                 variant="primary"

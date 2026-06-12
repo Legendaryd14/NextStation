@@ -1,16 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Trash2, Package, Clock, CheckCircle, XCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Package, Clock, CheckCircle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ordersApi } from "@/lib/api";
-import { useIsAdmin } from "@/lib/admin";
-import {
-  DashboardOrder,
-  OrdersResponse,
-  OrderStatus,
-  mapBackendOrder,
-} from "@/type/order";
+import { DashboardOrder, OrderStatus, mapBackendOrder } from "@/type/order";
 import {
   dashboardMutedTextClass,
   dashboardPageClass,
@@ -19,9 +12,16 @@ import {
   dashboardTableRowClass,
   dashboardTitleClass,
 } from "./dashboardStyles";
+import { useOrdersApi } from "@/hooks/useOrdersApi";
 
 export default function OrdersPage() {
-  const isAdmin = useIsAdmin();
+  const { getAllOrders } = useOrdersApi();
+  const listRef = useRef(getAllOrders);
+
+  useEffect(() => {
+    listRef.current = getAllOrders;
+  }, [getAllOrders]);
+
   const [orders, setOrders] = useState<DashboardOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,19 +31,38 @@ export default function OrdersPage() {
 
     async function fetchOrders() {
       try {
-        const res = (await ordersApi.list()) as OrdersResponse;
+        setLoading(true);
+        setError("");
 
+        const res = await listRef.current({
+          page: 1,
+          limit: 10,
+        });
+
+        console.log("ORDERS RESPONSE");
+        console.log(JSON.stringify(res, null, 2));
         if (ignore) return;
 
-        setError("");
-        setOrders((res.data ?? []).map(mapBackendOrder));
+        if (res.ok && res.data?.data) {
+          setOrders(res.data.data.map(mapBackendOrder));
+        } else {
+          setOrders([]);
+          setError(
+            res.data?.message ||
+              "Unable to load orders. Admin access required.",
+          );
+        }
       } catch (err) {
         console.error("Fetch orders error", err);
+
         if (ignore) return;
+
         setError("Unable to load orders. Admin access required.");
         setOrders([]);
       } finally {
-        if (!ignore) setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     }
 
@@ -54,46 +73,43 @@ export default function OrdersPage() {
     };
   }, []);
 
-  const deleteOrder = async (orderId: string) => {
-    if (!isAdmin) return;
-
-    try {
-      await ordersApi.delete(orderId);
-      setOrders((current) => current.filter((order) => order.id !== orderId));
-    } catch (err) {
-      console.error("Cancel order error", err);
-      setError("Failed to cancel order.");
-    }
-  };
-
   const getStatusIcon = (status: OrderStatus) => {
     switch (status) {
-      case "Pending":
-        return <Clock className="w-4 h-4" />;
-      case "Processing":
-      case "Shipped":
-        return <Package className="w-4 h-4" />;
-      case "Delivered":
-        return <CheckCircle className="w-4 h-4" />;
-      case "Cancelled":
-        return <XCircle className="w-4 h-4" />;
+      case "pending":
+        return <Clock className="h-4 w-4" />;
+      case "processing":
+      case "shipped":
+        return <Package className="h-4 w-4" />;
+      case "delivered":
+        return <CheckCircle className="h-4 w-4" />;
+      case "cancelled":
+        return <XCircle className="h-4 w-4" />;
+      default:
+        return <Package className="h-4 w-4" />;
     }
   };
 
   const getStatusColor = (status: OrderStatus) => {
     switch (status) {
-      case "Pending":
-        return "bg-[#ff6600]/10 text-[#ff6600]";
-      case "Processing":
-        return "bg-accent/10 text-accent";
-      case "Shipped":
-        return "bg-[#b400ff]/10 text-[#b400ff]";
-      case "Delivered":
-        return "bg-[#00ff88]/10 text-[#00ff88]";
-      case "Cancelled":
-        return "bg-primary/10 text-primary";
+      case "pending":
+        return "bg-orange-500/10 text-orange-400";
+      case "processing":
+        return "bg-sky-500/10 text-sky-400";
+      case "shipped":
+        return "bg-violet-500/10 text-violet-400";
+      case "delivered":
+        return "bg-emerald-500/10 text-emerald-400";
+      case "cancelled":
+        return "bg-red-500/10 text-red-400";
+      default:
+        return "bg-slate-500/10 text-slate-300";
     }
   };
+
+  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+  const activeOrders = orders.filter(
+    (o) => o.status !== "delivered" && o.status !== "cancelled",
+  ).length;
 
   return (
     <div className={dashboardPageClass()}>
@@ -101,10 +117,8 @@ export default function OrdersPage() {
         <h2 className={dashboardTitleClass("text-primary")}>
           Order Management
         </h2>
-        <p className={dashboardMutedTextClass("mt-1")}>
-          View and manage customer orders
-        </p>
-        <div className="mt-2 h-0.5 w-24 bg-primary"></div>
+        <p className={dashboardMutedTextClass("mt-1")}>View customer orders</p>
+        <div className="mt-2 h-0.5 w-24 bg-primary" />
       </div>
 
       {error && (
@@ -118,72 +132,82 @@ export default function OrdersPage() {
           <table className="w-full">
             <thead>
               <tr className={dashboardTableHeadClass()}>
-                <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm uppercase tracking-wider text-muted-foreground">
                   Order #
                 </th>
-                <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm uppercase tracking-wider text-muted-foreground">
                   Customer
                 </th>
-                <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm uppercase tracking-wider text-muted-foreground">
                   Product
                 </th>
-                <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm uppercase tracking-wider text-muted-foreground">
                   Quantity
                 </th>
-                <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm uppercase tracking-wider text-muted-foreground">
                   Total
                 </th>
-                <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm uppercase tracking-wider text-muted-foreground">
                   Status
                 </th>
-                <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm uppercase tracking-wider text-muted-foreground">
                   Date
                 </th>
-                {isAdmin && (
-                  <th className="px-6 py-4 text-left text-sm text-muted-foreground uppercase tracking-wider">
-                    Actions
-                  </th>
-                )}
               </tr>
             </thead>
+
             <tbody>
               {loading ? (
                 <tr>
                   <td
-                    colSpan={isAdmin ? 8 : 7}
+                    colSpan={7}
                     className="px-6 py-10 text-center text-muted-foreground"
                   >
                     Loading orders...
+                  </td>
+                </tr>
+              ) : orders.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-10 text-center text-muted-foreground"
+                  >
+                    No orders found.
                   </td>
                 </tr>
               ) : (
                 orders.map((order) => (
                   <tr key={order.id} className={dashboardTableRowClass()}>
                     <td className="px-6 py-4">
-                      <span className="text-accent font-mono text-sm">
+                      <span className="font-mono text-sm text-accent">
                         {order.orderNumber}
                       </span>
                     </td>
+
                     <td className="px-6 py-4">
                       <span className="text-foreground">{order.customer}</span>
                     </td>
+
                     <td className="px-6 py-4">
                       <span className="text-muted-foreground">
                         {order.product}
                       </span>
                     </td>
+
                     <td className="px-6 py-4">
                       <span className="text-foreground">{order.quantity}</span>
                     </td>
+
                     <td className="px-6 py-4">
                       <span className="text-foreground">
                         ${order.total.toFixed(2)}
                       </span>
                     </td>
+
                     <td className="px-6 py-4">
                       <div
                         className={cn(
-                          "inline-flex items-center gap-2 rounded px-3 py-1 text-sm",
+                          "inline-flex items-center gap-2 rounded px-3 py-1 text-sm capitalize",
                           getStatusColor(order.status),
                         )}
                       >
@@ -191,57 +215,34 @@ export default function OrdersPage() {
                         <span>{order.status}</span>
                       </div>
                     </td>
+
                     <td className="px-6 py-4">
                       <span className="text-muted-foreground">
                         {order.date}
                       </span>
                     </td>
-                    {isAdmin && (
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => deleteOrder(order.id)}
-                          className="p-2 rounded bg-destructive hover:bg-destructive/80 text-destructive-foreground transition-colors group"
-                          title="Cancel order"
-                        >
-                          <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                        </button>
-                      </td>
-                    )}
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
-
-        {!loading && orders.length === 0 && (
-          <div className="py-12 text-center">
-            <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className={dashboardMutedTextClass()}>No orders found</p>
-          </div>
-        )}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className={dashboardPanelClass("p-4")}>
           <p className={dashboardMutedTextClass("text-sm")}>Total Orders</p>
-          <p className="text-foreground mt-1">{orders.length}</p>
+          <p className="mt-1 text-foreground">{orders.length}</p>
         </div>
+
         <div className={dashboardPanelClass("p-4")}>
           <p className={dashboardMutedTextClass("text-sm")}>Total Revenue</p>
-          <p className="text-foreground mt-1">
-            ${orders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
-          </p>
+          <p className="mt-1 text-foreground">${totalRevenue.toFixed(2)}</p>
         </div>
+
         <div className={dashboardPanelClass("p-4")}>
           <p className={dashboardMutedTextClass("text-sm")}>Active Orders</p>
-          <p className="text-foreground mt-1">
-            {
-              orders.filter(
-                (o) => o.status !== "Delivered" && o.status !== "Cancelled",
-              ).length
-            }
-          </p>
+          <p className="mt-1 text-foreground">{activeOrders}</p>
         </div>
       </div>
     </div>

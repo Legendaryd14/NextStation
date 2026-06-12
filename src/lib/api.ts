@@ -1,5 +1,4 @@
 import { BASE_URL } from "@/app/base";
-import { ProductPayload } from "@/type/api";
 import type { SingelProduct } from "@/type/product";
 
 export const getProductByID = async (id: string): Promise<SingelProduct> => {
@@ -12,88 +11,4 @@ export const getProductByID = async (id: string): Promise<SingelProduct> => {
   }
 
   return await res.json();
-};
-
-export class ApiError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-
-    // این خط را اضافه کنید تا زنجیره پروتوتایپ اصلاح شود
-    Object.setPrototypeOf(this, ApiError.prototype);
-
-    // اختیاری: تنظیم نام کلاس برای لاگ‌های بهتر
-    this.name = "ApiError";
-  }
-}
-export async function apiClient<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const headers = new Headers(options.headers);
-
-  if (options.body && !(options.body instanceof FormData)) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  const response = await fetch(endpoint, {
-    ...options,
-    credentials: "include",
-    headers,
-  });
-
-  const data = (await response.json().catch(() => ({}))) as T & {
-    message?: string;
-  };
-
-  if (!response.ok) {
-    throw new ApiError(
-      data.message ?? `Request failed with status ${response.status}`,
-      response.status,
-    );
-  }
-
-  return data;
-}
-
-export const productsApi = {
-  list: (params: Record<string, string | number | undefined>) => {
-    const search = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== "") {
-        search.set(key, String(value));
-      }
-    });
-    const query = search.toString();
-    return apiClient(`/api/products${query ? `?${query}` : ""}`);
-  },
-  get: (id: string) => apiClient(`${BASE_URL}/products/${id}`),
-  create: (body: BodyInit | Record<string, any> | FormData) =>
-    apiClient("/api/products", { method: "POST", body: body as BodyInit }),
-  update: (id: string, body: BodyInit | Record<string, any> | FormData) =>
-    apiClient(`/api/products/${id}`, {
-      method: "PUT",
-      body: body as BodyInit,
-    }),
-  delete: (id: string) =>
-    apiClient(`/api/products/${id}`, { method: "DELETE" }),
-};
-
-export const ordersApi = {
-  list: (params: Record<string, string | number | undefined> = {}) => {
-    const search = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== "") {
-        search.set(key, String(value));
-      }
-    });
-    const query = search.toString();
-    return apiClient(`/api/orders${query ? `?${query}` : ""}`);
-  },
-  create: (body: unknown) =>
-    apiClient("/api/orders", { method: "POST", body: JSON.stringify(body) }),
-  delete: (id: string) => apiClient(`/api/orders/${id}`, { method: "DELETE" }),
-  stats: () => apiClient("/api/orders/stats"),
 };

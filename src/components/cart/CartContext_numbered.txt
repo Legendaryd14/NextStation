@@ -1,0 +1,171 @@
+1: "use client";
+1: 
+1: import {
+1:   createContext,
+1:   useCallback,
+1:   useContext,
+1:   useEffect,
+1:   useMemo,
+1:   useState,
+1: } from "react";
+1: import {
+1:   CartContextValue,
+1:   CartItem,
+1:   CartProduct,
+1: } from "@/type/cart";
+1: import { CartDrawer } from "./CartDrawer";
+1: 
+1: const CART_STORAGE_KEY = "nextstation-cart";
+1: 
+1: const CartContext = createContext<CartContextValue | null>(null);
+1: 
+1: function readStoredCart(): CartItem[] {
+1:   if (typeof window === "undefined") return [];
+1: 
+1:   try {
+1:     const raw = localStorage.getItem(CART_STORAGE_KEY);
+1:     if (!raw) return [];
+1:     const parsed = JSON.parse(raw) as CartItem[];
+1:     return Array.isArray(parsed) ? parsed : [];
+1:   } catch {
+1:     return [];
+1:   }
+1: }
+1: 
+1: export function CartProvider({ children }: { children: React.ReactNode }) {
+1:   const [items, setItems] = useState<CartItem[]>([]);
+1:   const [isOpen, setIsOpen] = useState(false);
+1:   const [hydrated, setHydrated] = useState(false);
+1: 
+1:   useEffect(() => {
+1:     queueMicrotask(() => {
+1:       setItems(readStoredCart());
+1:       setHydrated(true);
+1:     });
+1:   }, []);
+1: 
+1:   useEffect(() => {
+1:     if (!hydrated) return;
+1:     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+1:   }, [items, hydrated]);
+1: 
+1:   const addItem = useCallback((product: CartProduct, quantity = 1) => {
+1:     if (quantity <= 0 || product.stock <= 0) return;
+1: 
+1:     setItems((current) => {
+1:       const existing = current.find(
+1:         (item) => item.productId === product.productId,
+1:       );
+1: 
+1:       if (existing) {
+1:         const nextQuantity = Math.min(
+1:           existing.quantity + quantity,
+1:           product.stock,
+1:         );
+1:         return current.map((item) =>
+1:           item.productId === product.productId
+1:             ? { ...item, ...product, quantity: nextQuantity }
+1:             : item,
+1:         );
+1:       }
+1: 
+1:       return [
+1:         ...current,
+1:         {
+1:           ...product,
+1:           quantity: Math.min(quantity, product.stock),
+1:         },
+1:       ];
+1:     });
+1:   }, []);
+1: 
+1:   const removeItem = useCallback((productId: string) => {
+1:     setItems((current) =>
+1:       current.filter((item) => item.productId !== productId),
+1:     );
+1:   }, []);
+1: 
+1:   const incrementItem = useCallback((productId: string) => {
+1:     setItems((current) =>
+1:       current.map((item) => {
+1:         if (item.productId !== productId) return item;
+1:         if (item.quantity >= item.stock) return item;
+1:         return { ...item, quantity: item.quantity + 1 };
+1:       }),
+1:     );
+1:   }, []);
+1: 
+1:   const decrementItem = useCallback((productId: string) => {
+1:     setItems((current) =>
+1:       current
+1:         .map((item) => {
+1:           if (item.productId !== productId) return item;
+1:           return { ...item, quantity: item.quantity - 1 };
+1:         })
+1:         .filter((item) => item.quantity > 0),
+1:     );
+1:   }, []);
+1: 
+1:   const clearCart = useCallback(() => {
+1:     setItems([]);
+1:   }, []);
+1: 
+1:   const getItemQuantity = useCallback(
+1:     (productId: string) =>
+1:       items.find((item) => item.productId === productId)?.quantity ?? 0,
+1:     [items],
+1:   );
+1: 
+1:   const totalItems = useMemo(
+1:     () => items.reduce((sum, item) => sum + item.quantity, 0),
+1:     [items],
+1:   );
+1: 
+1:   const totalPrice = useMemo(
+1:     () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+1:     [items],
+1:   );
+1: 
+1:   const value = useMemo<CartContextValue>(
+1:     () => ({
+1:       items,
+1:       totalItems,
+1:       totalPrice,
+1:       isOpen,
+1:       setIsOpen,
+1:       openCart: () => setIsOpen(true),
+1:       closeCart: () => setIsOpen(false),
+1:       addItem,
+1:       removeItem,
+1:       incrementItem,
+1:       decrementItem,
+1:       clearCart,
+1:       getItemQuantity,
+1:     }),
+1:     [
+1:       items,
+1:       totalItems,
+1:       totalPrice,
+1:       isOpen,
+1:       addItem,
+1:       removeItem,
+1:       incrementItem,
+1:       decrementItem,
+1:       clearCart,
+1:       getItemQuantity,
+1:     ],
+1:   );
+1: 
+1:   return (
+1:     <CartContext.Provider value={value}>
+1:       {children}
+1:       <CartDrawer />
+1:     </CartContext.Provider>
+1:   );
+1: }
+1: 
+1: export function useCart() {
+1:   const ctx = useContext(CartContext);
+1:   if (!ctx) throw new Error("useCart must be used within CartProvider");
+1:   return ctx;
+1: }

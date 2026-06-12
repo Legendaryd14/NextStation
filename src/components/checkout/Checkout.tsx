@@ -11,9 +11,10 @@ import {
   PackageCheck,
   ShieldCheck,
 } from "lucide-react";
-import { BASE_URL } from "@/app/base";
+import { BASE_URL, IMAGE_BASE_URL } from "@/app/base";
 import { useCart } from "@/components/cart/CartContext";
 import { Input } from "@/components/ui/input";
+import { profile } from "console";
 
 type CheckoutStep = "address" | "payment";
 
@@ -58,7 +59,7 @@ function formatPrice(price: number) {
 function getImageUrl(src?: string) {
   if (!src) return "/placeholder.png";
   if (src.startsWith("http://") || src.startsWith("https://")) return src;
-  return `${BASE_URL}${src}`;
+  return `${IMAGE_BASE_URL}${src}`;
 }
 
 function getProfileUser(payload: unknown): CheckoutProfile {
@@ -96,7 +97,7 @@ export function Checkout() {
 
     async function loadProfile() {
       try {
-        const response = await fetch("/api/auth/me", {
+        const response = await fetch(`${BASE_URL}/profile`, {
           credentials: "include",
           cache: "no-store",
         });
@@ -173,13 +174,15 @@ export function Checkout() {
           image: item.image,
         })),
         shippingAddress: {
-          fullName: address.fullName,
+          name: address.fullName,
           email: address.email,
-          phone: address.phone,
-          address: address.address,
-          city: address.city,
-          postalCode: address.postalCode,
-          country: address.country,
+          address: {
+            phone: address.phone,
+            address: address.address,
+            city: address.city,
+            postalCode: address.postalCode,
+            country: address.country,
+          },
         },
         paymentMethod,
         itemsPrice: totalPrice,

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 import "@/styles/globals.css";
-import { AuthProvider } from "@/components/auth/context/Authcontext";
 import { CartProvider } from "@/components/cart/CartContext";
+import { AuthProvider } from "@/components/auth/context/AuthProvider.tsx";
 
 export const metadata: Metadata = {
   title: "NextStation",

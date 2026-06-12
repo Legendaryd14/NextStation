@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation"; // usePathname اضافه شد
-import { ProductCard } from "./ProductCard";
+
 import { ProductResponse } from "@/type/product";
+import { ProductCard } from "./productCard";
 
 interface ProductsGridProps {
   products: ProductResponse;

@@ -30,3 +30,23 @@ export type ProductResponse = {
     __v: number;
   };
 };
+
+export type ApiPaginatedResponse<T> = {
+  success: boolean;
+  count: number;
+  total: number;
+  page: number;
+  pages: number;
+  data: T[];
+};
+
+export type ApiSingleResponse<T> = {
+  success: boolean;
+  message?: string;
+  data: T;
+};
+
+export type ApiMessageResponse = {
+  success: boolean;
+  message?: string;
+};

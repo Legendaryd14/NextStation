@@ -1,38 +1,30 @@
-import { BASE_URL } from "@/app/base";
+export async function getProducts(params: {
+  page?: string;
+  limit?: string;
+  search?: string;
+  category?: string;
+  brand?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  rating?: string;
+  isActive?: string;
+}) {
+  const query = new URLSearchParams();
 
-export const getProducts = async (
-  params: { page?: string; limit?: string } = {},
-) => {
-  try {
-    const search = new URLSearchParams();
-    if (params.page) search.append("page", params.page);
-    if (params.limit) search.append("limit", params.limit);
-
-    const query = search.toString();
-
-    const fullUrl = `${BASE_URL}/products${query ? `?${query}` : ""}`;
-
-    console.log("Attempting to fetch from:", fullUrl);
-
-    const res = await fetch(fullUrl, {
-      method: "GET",
-
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error(`API Error: ${res.status} - ${errorText}`);
-      throw new Error(`Failed to fetch products: ${res.status}`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      query.set(key, value);
     }
+  });
 
-    return await res.json();
-  } catch (error) {
-    console.error("Network or API Error in getProducts:", error);
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/products?${query.toString()}`,
+    {
+      next: {
+        revalidate: 60,
+      },
+    },
+  );
 
-    throw error;
-  }
-};
+  return res.json();
+}

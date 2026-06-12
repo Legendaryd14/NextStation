@@ -1,4 +1,4 @@
-import ProductsGrid from "@/components/Home/product/ProductGrid";
+import ProductsGrid from "@/components/Home/product/productGrid";
 import { getProducts } from "@/lib/product";
 import type { Metadata } from "next";
 

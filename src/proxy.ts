@@ -1,76 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function proxy(req: NextRequest) {
-  const path = req.nextUrl.pathname;
-
-  const AdminRoutes = [
-    "/dashboard",
-    "/dashboard/orders",
-    "/dashboard/products",
-    "/dashboard/stock",
-  ];
-  const UserRoutes = ["/profile", "/cart", "/checkout"];
-  const publicRoutes = [
-    "/login",
-    "/auth",
-    "/api/auth/refresh-token",
-    "/api/auth/login",
-    "/api/auth/refreshToken",
-  ];
-
-  if (publicRoutes.some((route) => path.startsWith(route))) {
-    return NextResponse.next();
-  }
-
-  const isAdminRoute = AdminRoutes.some((route) => path.startsWith(route));
-  const isUserRoute = UserRoutes.some((route) => path.startsWith(route));
-  const isProtected = isAdminRoute || isUserRoute;
+export function proxy(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
 
   const token = req.cookies.get("token")?.value;
+  const role = req.cookies.get("role")?.value;
 
-  if (isProtected && !token) {
-    return redirectToLogin(isAdminRoute, req.url);
+  const isAdminRoute = pathname.startsWith("/dashboard");
+
+  const isUserRoute =
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/cart") ||
+    pathname.startsWith("/checkout");
+
+  const isAuthRoute =
+    pathname.startsWith("/login") || pathname.startsWith("/auth");
+
+  /*
+   * اگر لاگین کرده و دوباره وارد صفحه لاگین شد
+   */
+  if (isAuthRoute && token) {
+    if (role === "admin") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (isProtected && token) {
-    const role = req.cookies.get("role")?.value?.toLowerCase();
-
-    if (isAdminRoute && role !== "admin") {
-      return redirectToLogin(isAdminRoute, req.url);
-    }
-    if (isUserRoute && !["user", "customer"].includes(role ?? "")) {
-      return redirectToLogin(isAdminRoute, req.url);
+  /*
+   * مسیرهای ادمین
+   */
+  if (isAdminRoute) {
+    if (!token) {
+      return redirectToLogin(req, true);
     }
 
-    return NextResponse.next();
+    if (role !== "admin") {
+      return redirectToLogin(req, true);
+    }
+  }
+
+  /*
+   * مسیرهای کاربر
+   */
+  if (isUserRoute) {
+    if (!token) {
+      return redirectToLogin(req, false);
+    }
   }
 
   return NextResponse.next();
 }
 
-function redirectToLogin(isAdminRoute: boolean, currentUrl: string | URL) {
-  const url = new URL(currentUrl);
-  const loginUrl = new URL(isAdminRoute ? "/login" : "/auth", currentUrl);
+function redirectToLogin(req: NextRequest, adminRoute: boolean) {
+  const loginUrl = new URL(adminRoute ? "/auth" : "/auth", req.url);
 
-  if (!isAdminRoute) {
-    loginUrl.searchParams.set("status", "login");
-  }
-  loginUrl.searchParams.set("redirect", `${url.pathname}${url.search}`);
+  loginUrl.searchParams.set(
+    "callbackUrl",
+    `${req.nextUrl.pathname}${req.nextUrl.search}`,
+  );
 
   const response = NextResponse.redirect(loginUrl);
+
   response.cookies.delete("token");
   response.cookies.delete("refreshToken");
-
   response.cookies.delete("role");
+  response.cookies.delete("user");
+
   return response;
 }
 
 export const config = {
   matcher: [
-    "/dashboard",
     "/dashboard/:path*",
     "/profile/:path*",
-    "/cart",
-    "/checkout",
+    "/cart/:path*",
+    "/checkout/:path*",
+    "/login",
+    "/auth",
   ],
 };

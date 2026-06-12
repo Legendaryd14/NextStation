@@ -14,20 +14,54 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { dashboardPageClass, dashboardPanelClass } from "./dashboardStyles";
 import { useTheme } from "next-themes";
-import { ordersApi, productsApi } from "@/lib/api";
-import { OrderStatsResponse } from "@/type/order";
-import { ProductsResponse } from "@/type/product";
+import { useOrdersApi } from "@/hooks/useOrdersApi";
+import { useProductsApi } from "@/hooks/useProductsApi";
+import type { Order, OrdersResponse } from "@/type/order";
+import type { ProductsResponse } from "@/type/product";
 
 type ChartPoint = { name: string; uv: number; pv: number };
 
-const fallbackData: ChartPoint[] = [
-  { name: "Jan", uv: 0, pv: 0 },
-  { name: "Feb", uv: 0, pv: 0 },
-  { name: "Mar", uv: 0, pv: 0 },
-  { name: "Apr", uv: 0, pv: 0 },
-  { name: "May", uv: 0, pv: 0 },
-  { name: "Jun", uv: 0, pv: 0 },
-];
+const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+
+const fallbackData: ChartPoint[] = months.map((name) => ({
+  name,
+  uv: 0,
+  pv: 0,
+}));
+
+function buildMonthlyChart(orders: Order[]): ChartPoint[] {
+  const monthlyMap = new Map<number, { orders: number; revenue: number }>();
+
+  orders.forEach((order) => {
+    const date = new Date(order.createdAt);
+
+    if (Number.isNaN(date.getTime())) return;
+
+    const month = date.getMonth();
+
+    if (month > 5) return;
+
+    const current = monthlyMap.get(month) ?? {
+      orders: 0,
+      revenue: 0,
+    };
+
+    monthlyMap.set(month, {
+      orders: current.orders + 1,
+      revenue: current.revenue + (order.totalPrice ?? 0),
+    });
+  });
+
+  return months.map((name, index) => {
+    const item = monthlyMap.get(index);
+
+    return {
+      name,
+      uv: item?.orders ?? 0,
+      pv: item?.revenue ?? 0,
+    };
+  });
+}
 
 const Chart = ({ data }: { data: ChartPoint[] }) => {
   const { resolvedTheme } = useTheme();
@@ -52,6 +86,7 @@ const Chart = ({ data }: { data: ChartPoint[] }) => {
               stroke={isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)"}
               strokeDasharray="4 4"
             />
+
             <XAxis
               dataKey="name"
               tick={{ fill: isDark ? "#a1a1aa" : "#64748b", fontSize: 12 }}
@@ -62,6 +97,7 @@ const Chart = ({ data }: { data: ChartPoint[] }) => {
               }}
               tickLine={false}
             />
+
             <Tooltip
               contentStyle={{
                 background: isDark ? "#05070d" : "#ffffff",
@@ -72,6 +108,7 @@ const Chart = ({ data }: { data: ChartPoint[] }) => {
                 color: isDark ? "#fff" : "#0f172a",
               }}
             />
+
             <Line
               type="monotone"
               dataKey="uv"
@@ -79,6 +116,7 @@ const Chart = ({ data }: { data: ChartPoint[] }) => {
               strokeWidth={2}
               dot={false}
             />
+
             <Line
               type="monotone"
               dataKey="pv"
@@ -96,6 +134,9 @@ const Chart = ({ data }: { data: ChartPoint[] }) => {
 };
 
 function BentoComponent() {
+  const ordersApi = useOrdersApi();
+  const productsApi = useProductsApi();
+
   const [chartData, setChartData] = useState<ChartPoint[]>(fallbackData);
   const [productTotal, setProductTotal] = useState(0);
   const [orderTotal, setOrderTotal] = useState(0);
@@ -106,25 +147,28 @@ function BentoComponent() {
 
     async function loadDashboardData() {
       try {
-        const [statsRes, productsRes] = await Promise.all([
-          ordersApi.stats() as Promise<OrderStatsResponse>,
-          productsApi.list({ page: 1, limit: 1 }) as Promise<ProductsResponse>,
+        const [ordersRes, productsRes] = await Promise.all([
+          ordersApi.list<OrdersResponse>(),
+          productsApi.list<ProductsResponse>({ page: 1, limit: 1 }),
         ]);
 
         if (ignore) return;
 
-        setProductTotal(productsRes.total ?? productsRes.count ?? 0);
+        const orders = ordersRes.data?.data ?? [];
 
-        const stats = statsRes.data;
-        if (stats?.monthlySales?.length) {
-          setChartData(stats.monthlySales);
-        }
-        if (stats?.totalOrders !== undefined) {
-          setOrderTotal(stats.totalOrders);
-        }
-        if (stats?.totalRevenue !== undefined) {
-          setRevenue(stats.totalRevenue);
-        }
+        const validRevenueOrders = orders.filter(
+          (order) => order.status !== "cancelled",
+        );
+
+        setProductTotal(productsRes.total ?? productsRes.count ?? 0);
+        setOrderTotal(orders.length);
+        setRevenue(
+          validRevenueOrders.reduce(
+            (sum, order) => sum + (order.totalPrice ?? 0),
+            0,
+          ),
+        );
+        setChartData(buildMonthlyChart(validRevenueOrders));
       } catch (err) {
         console.error("Dashboard stats error", err);
       }
@@ -135,13 +179,15 @@ function BentoComponent() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [ordersApi, productsApi]);
 
   const features = useMemo(
     () => [
       {
         title: "Sales Analytics",
-        description: `Monthly sales overview. Total revenue: $${revenue.toFixed(2)}.`,
+        description: `Monthly sales overview. Total revenue: $${revenue.toFixed(
+          2,
+        )}.`,
         header: <Chart data={chartData} />,
         className: "md:col-span-2",
       },
@@ -157,7 +203,7 @@ function BentoComponent() {
       },
       {
         title: "Performance Metrics",
-        description: "Live metrics from your backend dashboard.",
+        description: "Live metrics calculated from backend orders.",
         header: <Chart data={chartData} />,
         className: "md:col-span-2",
       },

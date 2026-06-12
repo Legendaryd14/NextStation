@@ -1,60 +1,100 @@
+import type { ApiPaginatedResponse, ApiSingleResponse } from "./api";
+
 export type OrderStatus =
-  | "Pending"
-  | "Processing"
-  | "Shipped"
-  | "Delivered"
-  | "Cancelled"
   | "pending"
   | "processing"
   | "shipped"
   | "delivered"
   | "cancelled";
 
-export type OrderItem = {
-  product?: { _id?: string; name?: string };
-  name?: string;
-  quantity?: number;
-  price?: number;
-  qty?: number;
+export type PaymentMethod = "cash" | "card" | "online";
+
+export type ShippingAddress = {
+  name: string;
+  phone: string;
+  address: string;
 };
 
-export type BackendOrder = {
+export type OrderUser = {
   _id: string;
-  id?: number;
-  orderNumber?: string;
-  user?: { name?: string; email?: string; _id?: string };
-  userName?: string;
-  customer?: string;
-  orderItems?: OrderItem[];
-  items?: OrderItem[];
-  totalPrice?: number;
-  total?: number;
-  status?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  name: string;
+  email: string;
 };
 
-export type OrdersResponse = {
-  success: boolean;
-  count?: number;
-  total?: number;
-  page?: number;
-  pages?: number;
-  totalPages?: number;
-  data: BackendOrder[];
-  message?: string;
+export type OrderProduct = {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  images: string[];
+  category: string;
+  stock: number;
+  brand: string;
+  rating: number;
+  numReviews: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
 };
 
-export type OrderStatsResponse = {
-  success: boolean;
-  data?: {
-    totalOrders?: number;
-    totalRevenue?: number;
-    activeOrders?: number;
-    monthlySales?: Array<{ name: string; uv: number; pv: number }>;
-  };
-  message?: string;
+export type OrderItem = {
+  _id: string;
+  product: OrderProduct;
+  name: string;
+  quantity: number;
+  price: number;
+  image: string;
 };
+
+export type Order = {
+  _id: string;
+  user: OrderUser;
+  orderItems: OrderItem[];
+  shippingAddress: ShippingAddress;
+  paymentMethod: PaymentMethod;
+  totalPrice: number;
+  status: OrderStatus;
+  isPaid: boolean;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+};
+
+export type OrdersResponse = ApiPaginatedResponse<Order>;
+
+export type OrderResponse = ApiSingleResponse<Order>;
+
+export type CreateOrderItemInput = {
+  product: string;
+  quantity: number;
+};
+
+export type CreateShippingAddressInput = {
+  name: string;
+  phone: string;
+  address: string;
+};
+
+export type CreateOrderInput = {
+  orderItems: CreateOrderItemInput[];
+  shippingAddress: CreateShippingAddressInput;
+  paymentMethod: PaymentMethod;
+};
+
+export type CreateOrderResponse = ApiSingleResponse<Order>;
+
+export type UpdateOrderStatusInput = {
+  status: OrderStatus;
+};
+
+export type UpdateOrderStatusResponse = ApiSingleResponse<Order>;
+
+export type UpdateOrderToPaidInput = {
+  isPaid?: boolean;
+};
+
+export type UpdateOrderToPaidResponse = ApiSingleResponse<Order>;
 
 export type DashboardOrder = {
   id: string;
@@ -67,49 +107,30 @@ export type DashboardOrder = {
   date: string;
 };
 
-export function normalizeOrderStatus(status?: string): OrderStatus {
-  const value = (status ?? "Pending").toLowerCase();
-  switch (value) {
-    case "processing":
-      return "Processing";
-    case "shipped":
-      return "Shipped";
-    case "delivered":
-      return "Delivered";
-    case "cancelled":
-      return "Cancelled";
-    default:
-      return "Pending";
-  }
-}
+export function mapBackendOrder(order: Order): DashboardOrder {
+  const firstItem = order.orderItems?.[0];
 
-export function mapBackendOrder(order: BackendOrder): DashboardOrder {
-  const items = order.orderItems ?? order.items ?? [];
-  const productLabel =
-    items
-      .map((item) => item.product?.name ?? item.name ?? "Product")
-      .filter(Boolean)
-      .join(", ") || "—";
-  const quantity = items.reduce(
-    (sum, item) => sum + (item.quantity ?? item.qty ?? 0),
-    0,
-  );
-  ``;
+  const productNames =
+    order.orderItems?.length > 1
+      ? `${firstItem?.name ?? "Unknown Product"} +${order.orderItems.length - 1} more`
+      : (firstItem?.name ?? "Unknown Product");
+
+  const totalQuantity =
+    order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+
   return {
     id: order._id,
-    orderNumber: order.orderNumber ?? order._id.slice(-8).toUpperCase(),
+    orderNumber: `#${order._id.slice(-6).toUpperCase()}`,
     customer:
-      order.user?.name ??
-      order.user?.email ??
-      order.userName ??
-      order.customer ??
-      "Unknown customer",
-    product: productLabel,
-    quantity: quantity || items.length,
-    total: order.totalPrice ?? order.total ?? 0,
-    status: normalizeOrderStatus(order.status),
-    date: order.createdAt
-      ? new Date(order.createdAt).toLocaleDateString()
-      : "—",
+      order.user?.name ?? order.shippingAddress?.name ?? "Unknown Customer",
+    product: productNames,
+    quantity: totalQuantity,
+    total: order.totalPrice ?? 0,
+    status: order.status,
+    date: new Date(order.createdAt).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }),
   };
 }
